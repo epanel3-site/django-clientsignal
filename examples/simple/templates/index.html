@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+  <script src="{{ STATIC_URL }}socket.io.js"></script>
+  <script>
+    $(function() {
+        var sock = new io.connect('http://' + window.location.host);
+
+        sock.on('disconnect', function() {
+            sock.socket.reconnect();
+        });
+
+        sock.on('pong', function(data) {
+            alert("Pong " + data.pong)
+        });
+
+        $('a#ping').click(function(e) { 
+            e.preventDefault();
+            sock.emit('ping', {'ping': 'stringping'});
+        });
+    });
+</script>
+</head>
+<body>
+  <h3><a id="ping" href="">Ping!</a></h3>
+</body>
+</html>
+

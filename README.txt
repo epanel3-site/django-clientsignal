@@ -1,0 +1,37 @@
+Django Client Signals
+
+TornadIO2-based mechanism for sending and receiving Django signals as 
+socket.io client-side events.
+
+    # Create Signals
+    ping = Signal(providing_args=["ping"])
+    pong = Signal(providing_args=["pong"])
+
+    # Register them as client send/receivable
+    clientsignal.register('pong', pong)
+    clientsignal.register('ping', ping)
+
+    # Define a normal Django signal receiver for the remote signal
+    @receiver(ping)
+    def handle_ping(sender, **kwargs):
+        # Send a signal to connected clients
+        pong.send(sender=None, pong="Ponged")
+
+The corrosponding Javascript would be:
+
+    var sock = new io.connect('http://' + window.location.host);
+
+    sock.on('disconnect', function() {
+        sock.socket.reconnect();
+    });
+
+    sock.on('pong', function(data) {
+        alert("Pong " + data.pong)
+    });
+
+    $('a#ping').click(function(e) {  
+        e.preventDefault();
+        sock.emit('ping', {'ping': 'stringping'});
+    });
+
+
