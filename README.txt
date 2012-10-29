@@ -1,5 +1,7 @@
 Django Client Signals
 
+This is an experiment and proof-of-concept at the moment. I really don't recommend using it for anything serious.
+
 TornadIO2-based mechanism for sending and receiving Django signals as 
 socket.io client-side events.
 
