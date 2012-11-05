@@ -57,7 +57,7 @@ class Command(BaseCommand):
         if settings.DEBUG:
             import logging
             logger = logging.getLogger()
-            logger.setLevel(logging.DEBUG)
+            logger.setLevel(logging.INFO)
 
         # if len(ports) > 2:
         #     raise CommandError('Usage is runtornadio2 %s' % self.args)
