@@ -170,14 +170,44 @@ class SignalConnection(tornadio2.SocketConnection):
 
     @classmethod
     def register_signal(cls, name, signal, listen=False, broadcast=False):
+        """ 
+        Register the signal. The signal can either be listened for by
+        this connection, broadcast by this connection (if it is sent),
+        or both. 
+
+        Signals that are listened for from the client are wrapped
+        similarly to TornadIO2's @event()s. 
+        """
         if listen:
             cls.__listen_signals__[name] = signal
+
+            # Create an event handler to wrap the signal and add it to
+            # the SocketConnection's _events.
+            def handler(conn, *args, **kwargs):
+                logging.info("Sending signal " + name)
+                signal.send(conn.request.user, **kwargs)
+
+            cls._events[name] = handler
+
         if broadcast:
             cls.__broadcast_signals__[name] = signal
+
+    def send_signal(self, name, **kwargs):
+        """ 
+        Send a signal to the client with the given names and the given 
+        kwargs. This function simply wraps the tornadio2.SocketConnection 
+        emit() function for possible overrides. 
+        """
+        self.emit(name, **kwargs)
 
     def on_open(self, connection_info):
         self.request = build_request(connection_info)
         self.connected_signal.send(sender=self, request=self.request)
+
+        logging.info("Opened " + str(self))
+        logging.info("Listening: " + str(self.__listen_signals__))
+        logging.info("Events: " + str(self._events))
+        logging.info("Broadcasting: " + str(self.__broadcast_signals__))
 
         # Generate a listener function for the given signal with the
         # given name and return it. That function will handle "emitting"
@@ -193,7 +223,7 @@ class SignalConnection(tornadio2.SocketConnection):
                 # was received over this connection, send it on.
                 if sender != self:
                     logging.info("Sending signal " + name)
-                    self.emit(name, **kwargs)
+                    self.send_signal(name, **kwargs)
             
             return listener
 
@@ -218,12 +248,7 @@ class SignalConnection(tornadio2.SocketConnection):
         """ Receive socket.io events and send Django Signals. """
 
         self.event_signal.send(sender=self, event=name, request=self.request, **kwargs)
-        # Lookup a specific signal by the event name to see if we can
-        # fire off something a little more specific.
-        for n, signal in self.__listen_signals__.items():
-            if n == name:
-                logging.info("Sending signal " + name)
-                signal.send(self.request.user, **kwargs)
+        return super(SignalConnection, self).on_event(name, args, kwargs)
 
     def emit(self, name, *args, **kwargs):
         """ 
