@@ -2,6 +2,8 @@ from django.utils.functional import memoize
 from django.utils.datastructures import SortedDict
 from django.utils.importlib import import_module
 
+from django.core.exceptions import ImproperlyConfigured
+
 import clientsignal.settings as app_settings
 
 __signalconnection = SortedDict()
