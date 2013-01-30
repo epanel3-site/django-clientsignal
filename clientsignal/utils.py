@@ -20,7 +20,6 @@ def get_class_or_func(import_path):
         raise ImproperlyConfigured('Module "%s" does not define a "%s" '
                                    'class or function.' % (module, attr))
 
-    print "IMPORTED", imported
     return imported
 
 def __get_signalconnection(import_path):
