@@ -168,7 +168,7 @@ class SignalConnection(tornadio2.SocketConnection):
     __broadcast_signals__ = {}
 
     def __str__(self):
-        return "%s SignalConnection" % self.request.user
+        return "%s %s" % (self.request.user, self.__class__.__name__)
 
     @classmethod
     def register_signal(cls, name, signal, listen=False, broadcast=False):
