@@ -41,7 +41,6 @@ The corrosponding Javascript would be:
 """
 
 import weakref
-import logging
 
 import tornadio2
 import json
@@ -56,6 +55,9 @@ import clientsignal.settings as app_settings
 from clientsignal.utils import get_signalconnection
 from clientsignal.utils import get_class_or_func
 
+import logging
+log = logging.getLogger(__name__)
+
 # Some signals to respond to client-side events
 client_connected = Signal(providing_args=['request'])
 client_disconnected = Signal(providing_args=['request'])
@@ -64,19 +66,19 @@ client_event = Signal(providing_args=['request', 'event'])
 
 @receiver(client_connected)
 def handle_connection(sender, request, **kwargs):
-    logging.info("Connected: " + str(sender))
+    log.info("Connected: " + str(sender))
 
 @receiver(client_disconnected)
 def handle_disconnection(sender, request, **kwargs):
-    logging.info("Disconnected: " + str(sender))
+    log.info("Disconnected: " + str(sender))
 
 @receiver(client_message)
 def handle_message(sender, message, **kwargs):
-    logging.info("Message: " + str(sender) + " " + message)
+    log.info("Message: " + str(sender) + " " + message)
 
 @receiver(client_event)
 def handle_event(sender, event, **kwargs):
-    logging.info("Event: " + str(sender) + " " + event)
+    log.info("Event: " + str(sender) + " " + event)
 
 
 def build_request(connection_info, path = None):
@@ -109,7 +111,7 @@ def event(endpoint, name, message_id, *args, **kwargs):
             )
 
         if kwargs:
-            logging.error('Can not generate event() with args and kwargs.')
+            log.error('Can not generate event() with args and kwargs.')
     else:
         evt = dict(
             name=name,
@@ -184,7 +186,7 @@ class SignalConnection(tornadio2.SocketConnection):
             # Create an event handler to wrap the signal and add it to
             # the SocketConnection's _events.
             def handler(conn, *args, **kwargs):
-                logging.info("Sending signal " + name)
+                log.info("Sending signal " + name)
                 signal.send(conn.request.user, **kwargs)
 
             cls._events[name] = handler
@@ -198,16 +200,17 @@ class SignalConnection(tornadio2.SocketConnection):
         kwargs. This function simply wraps the tornadio2.SocketConnection 
         emit() function for possible overrides. 
         """
+        log.info("Sending signal named " + name)
         self.emit(name, **kwargs)
 
     def on_open(self, connection_info):
         self.request = build_request(connection_info)
         self.connected_signal.send(sender=self, request=self.request)
 
-        logging.info("Opened " + str(self))
-        logging.info("Listening: " + str(self.__listen_signals__))
-        logging.info("Events: " + str(self._events))
-        logging.info("Broadcasting: " + str(self.__broadcast_signals__))
+        log.info("Opened " + str(self))
+        # log.info("Listening: " + str(self.__listen_signals__))
+        # log.info("Events: " + str(self._events))
+        # log.info("Broadcasting: " + str(self.__broadcast_signals__))
 
         # Generate a listener function for the given signal with the
         # given name and return it. That function will handle "emitting"
@@ -222,7 +225,7 @@ class SignalConnection(tornadio2.SocketConnection):
                 # If the sender is NOT this connection (i.e. the signal
                 # was received over this connection, send it on.
                 if sender != self:
-                    logging.info("Sending signal " + name)
+                    log.info(str(self) + " sending signal " + name)
                     self.send_signal(name, **kwargs)
             
             return listener
@@ -275,7 +278,7 @@ def listen(name, signal, connection=None):
     # Register the signal with the connection so that client socket.io
     # events with the given name are sent as signals within Django when
     # received.
-    logging.info("Listening for signal " + name)
+    log.info("Listening for signal " + name)
     connection.register_signal(name, signal, listen=True)
 
 
@@ -293,7 +296,7 @@ def broadcast(name, signal, connection=None):
     # Register the signal with the connection so that client socket.io
     # events with the given name are sent as signals within Django when
     # received.
-    logging.info("Broadcasting signal " + name)
+    log.info("Broadcasting signal " + name)
     connection.register_signal(name, signal, broadcast=True)
     
 
@@ -311,7 +314,7 @@ def register(name, signal, connection=None):
     # Register the signal with the connection so that client socket.io
     # events with the given name are sent as signals within Django when
     # received.
-    logging.info("Registering signal " + name)
+    log.info("Registering signal " + name)
     connection.register_signal(name, signal, listen=True, broadcast=True)
 
 
