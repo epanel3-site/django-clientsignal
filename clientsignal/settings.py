@@ -22,3 +22,15 @@ CLIENTSIGNAL_DEFAULT_ENCODER = getattr(settings,
 CLIENTSIGNAL_OBJECT_HOOK = getattr(settings, 
         'CLIENTSIGNAL_OBJECT_HOOK',
         CLIENTSIGNAL_OBJECT_HOOK_DEFAULT)
+
+CLIENTSIGNAL_DEFAULT_PROTOCOLS = (
+        'websocket',
+        'flashsocket',
+        'xhr-polling',
+        'htmlfile',
+        'jsonp-polling',
+)
+CLIENTSIGNAL_PROTOCOLS = getattr(settings, 
+        'CLIENTSIGNAL_PROTOCOLS',
+        CLIENTSIGNAL_DEFAULT_PROTOCOLS)
+

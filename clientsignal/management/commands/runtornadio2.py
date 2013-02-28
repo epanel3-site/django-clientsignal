@@ -125,11 +125,7 @@ class Command(BaseCommand):
         ConnectionClass = get_signalconnection(
                 app_settings.CLIENTSIGNAL_MULTIPLEXED_CONNECTION)
         router = tornadio2.TornadioRouter(ConnectionClass, {
-            'enabled_protocols': [
-                    'websocket',
-                    'xhr-polling',
-                    'htmlfile'
-            ]})
+            'enabled_protocols': app_settings.CLIENTSIGNAL_PROTOCOLS})
 
         try:
             application = tornado.web.Application(router.urls + [
