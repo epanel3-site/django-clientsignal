@@ -170,6 +170,7 @@ class SignalConnection(tornadio2.SocketConnection):
     def __str__(self):
         return "%s %s" % (self.request.user, self.__class__.__name__)
 
+
     @classmethod
     def register_signal(cls, name, signal, listen=False, broadcast=False):
         """ 
@@ -187,12 +188,14 @@ class SignalConnection(tornadio2.SocketConnection):
             # the SocketConnection's _events.
             def handler(conn, *args, **kwargs):
                 log.info("Sending signal " + name)
+                kwargs['__signal_connection__'] = conn
                 signal.send(conn.request.user, **kwargs)
 
             cls._events[name] = handler
 
         if broadcast:
             cls.__broadcast_signals__[name] = signal
+
 
     def send_signal(self, name, **kwargs):
         """ 
@@ -202,6 +205,7 @@ class SignalConnection(tornadio2.SocketConnection):
         """
         log.info("Sending signal named " + name)
         self.emit(name, **kwargs)
+
 
     def on_open(self, connection_info):
         self.request = build_request(connection_info)
@@ -215,7 +219,7 @@ class SignalConnection(tornadio2.SocketConnection):
         # Generate a listener function for the given signal with the
         # given name and return it. That function will handle "emitting"
         # the signal as a socket.io event on this connection.
-        def listener_function(name, signal):
+        def listener_factory(name, signal):
             def listener(sender, **kwargs):
                 # Remove the 'signal' object from the kwargs, it's not
                 # serializable, and we don't need it.
@@ -233,7 +237,7 @@ class SignalConnection(tornadio2.SocketConnection):
         # Receive the signal within Django and send it to the client as a
         # socket.io event.
         for name, signal in self.__broadcast_signals__.items():
-            listener = listener_function(name, signal)
+            listener = listener_factory(name, signal)
             # We don't want a weakref to the handler function, we don't
             # want it garbage collected.
             signal.connect(listener, weak=False)
@@ -252,6 +256,7 @@ class SignalConnection(tornadio2.SocketConnection):
 
         self.event_signal.send(sender=self, event=name, request=self.request, **kwargs)
         return super(SignalConnection, self).on_event(name, args, kwargs)
+
 
     def emit(self, name, *args, **kwargs):
         """ 
