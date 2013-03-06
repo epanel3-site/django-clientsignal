@@ -140,8 +140,14 @@ class Command(BaseCommand):
                     # XXX: Find a way to use more than one port for
                     # socket.io?
                     socket_io_port = base_port,
+
             )
 
+            if 'flashsocket' in app_settings.CLIENTSIGNAL_PROTOCOLS:
+                application.settings['flash_policy_port'] = app_settings.CLIENTSIGNAL_FLASH_POLICY_PORT
+                application.settings['flash_policy_file'] = os.path.join(
+                        settings.STATIC_ROOT, 'clientsignal', 'flash', 'flashpolicy.xml')
+                
             io_loop = tornado.ioloop.IOLoop.instance()
             server = tornadio2.SocketServer(application, 
                     io_loop = io_loop, auto_start = False) 
