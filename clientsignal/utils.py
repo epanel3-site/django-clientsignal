@@ -41,3 +41,21 @@ def __get_signalconnection(import_path):
 
 get_signalconnection = memoize(__get_signalconnection, __signalconnection, 1)
 
+def get_backend_url_parts(url):
+    import urlparse
+    from urllib import unquote
+
+    parts = urlparse.urlparse(url)
+    path = unquote(parts.path or '') or None
+    
+    parts_dict = {
+                  'scheme': parts.scheme,
+                  'host': getattr(parts, 'host', 'localhost'),
+                  'port': unquote(parts.port or '') or None,
+                  'username': unquote(parts.username  or ''),
+                  'password': unquote(parts.password or ''),
+                  'path': path[1:] if path and path[0] == '/' else path,
+                 }
+
+    return parts_dict
+

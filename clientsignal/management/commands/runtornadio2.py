@@ -41,11 +41,16 @@ class Command(BaseCommand):
             dest='use_reloader', 
             default=False,
             help="Use code change auto-reloader."),
+        make_option('--django', 
+            action='store_true',
+            dest='use_django', 
+            default=False,
+            help="Serve the full Django application."),
         make_option('--static', 
             action='store_true',
             dest='use_static', 
             default=False,
-            help="Serve static files."),
+            help="Serve static files (requires --django)."),
         
     )
     help = "Starts a Tornado/TornadIO2 Socket Server."
@@ -62,8 +67,13 @@ class Command(BaseCommand):
         # if len(ports) > 2:
         #     raise CommandError('Usage is runtornadio2 %s' % self.args)
 
-        if not ports:
+        use_django = options.get('use_django', False)
+        if use_django and not ports:
             ports = [DEFAULT_PORT]
+        elif not ports:
+            self.stderr.write("Please specify a port or --django to run on the default port.\n")
+            sys.exit(0)
+
         self.ports = ports
 
         self.run(**options)
@@ -109,38 +119,42 @@ class Command(BaseCommand):
 
         base_port = self.ports[0]
 
-        django_handler = get_wsgi_application()
-
-        use_static = options.get('use_static', False)
-        if use_static:
-            # (r'/static/(.*)', 
-            #     tornado.web.StaticFileHandler, 
-            #     {'path': static_path}),
-            # XXX: Use tornado for this instead of Django.
-            from django.contrib.staticfiles.handlers import StaticFilesHandler
-            django_handler = StaticFilesHandler(django_handler)
-            
-        django_container = tornado.wsgi.WSGIContainer(django_handler)
-
         ConnectionClass = get_signalconnection(
                 app_settings.CLIENTSIGNAL_MULTIPLEXED_CONNECTION)
         router = tornadio2.TornadioRouter(ConnectionClass, {
             'enabled_protocols': app_settings.CLIENTSIGNAL_PROTOCOLS})
 
-        try:
-            application = tornado.web.Application(router.urls + [
+        tornado_urls = router.urls
+
+        use_django = options.get('use_django', False)
+        if use_django:
+            django_handler = get_wsgi_application()
+
+            use_static = options.get('use_static', False)
+            if use_static:
+                # (r'/static/(.*)', 
+                #     tornado.web.StaticFileHandler, 
+                #     {'path': static_path}),
+                # XXX: Use tornado for this instead of Django.
+                from django.contrib.staticfiles.handlers import StaticFilesHandler
+                django_handler = StaticFilesHandler(django_handler)
+                
+            django_container = tornado.wsgi.WSGIContainer(django_handler)
+
+            tornado_urls = tornado_urls + [
                         (r'.*', 
                             tornado.web.FallbackHandler, 
                             {'fallback': django_container}),
-                    ],
+                    ]
 
+        try:
+            application = tornado.web.Application(tornado_urls,
                     # The TornadIO2 SocketServer wrapper for Tornado
                     # will take care of the initial port. The first port
                     # will be the only one used for socket.io.
                     # XXX: Find a way to use more than one port for
                     # socket.io?
                     socket_io_port = base_port,
-
             )
 
             if 'flashsocket' in app_settings.CLIENTSIGNAL_PROTOCOLS:
@@ -157,6 +171,7 @@ class Command(BaseCommand):
                 logging.info('Adding tornadio server on port \'%s\'',
                              port)
                 server.listen(port)
+
 
             io_loop.start()
 

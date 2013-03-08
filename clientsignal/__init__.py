@@ -1,24 +1,27 @@
 # -*- coding: utf-8 -*-
 
 from clientsignal.signal import register, listen, broadcast
-from clientsignal.signal import SignalConnection
-from clientsignal.signal import SignalEncoder
+from clientsignal.conn import BaseSignalConnection
+from clientsignal.conn import SimpleSignalConnection
+from clientsignal.redisconn import RedisSignalConnection
 
-from clientsignal.signal import client_connected
-from clientsignal.signal import client_disconnected
-from clientsignal.signal import client_message
-from clientsignal.signal import client_event
+from clientsignal.conn import SignalEncoder
 
+import clientsignal.settings as app_settings
+
+if app_settings.CLIENTSIGNAL_BACKEND.startswith('redis'):
+    SignalConnection = RedisSignalConnection
+else:
+    SignalConnection = SimpleSignalConnection
 
 __all__ = [
-           'register', 
-           'listen',
-           'broadcast',
-           'SignalConnection',
-           'SignalEncoder',
-           'client_connected',
-           'client_disconnected',
-           'client_message',
-           'client_event',
+            'register', 
+            'listen',
+            'broadcast',
+            'SignalEncoder',
+            'BaseSignalConnection',
+            'SimpleSignalConnection',
+            'RedisSignalConnection',
+            'SignalConnection',
           ]
 
