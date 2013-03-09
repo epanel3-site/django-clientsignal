@@ -137,14 +137,25 @@ class BaseSignalConnection(DjangoRequestSocketConnection):
         """
         log.info("Sending signal named " + name)
         self.emit(name, **kwargs)
-    
 
+    def emit(self, name, *args, **kwargs):
+        """ 
+        Send socket.io event. This overrides the SocketConnection emit()
+        to provide for optional encoders.
+        """
+        if self.is_closed:
+            return
+
+        msg = event(self.endpoint, name, None, *args, **kwargs)
+        self.session.send_message(msg)
+
+    
 class SimpleSignalConnection(BaseSignalConnection):
 
     @classmethod
     def register_signal(cls, name, signal, listen=False, broadcast=False):
         super(SimpleSignalConnection, cls).register_signal(name, 
-                signal, listen=False, broadcast=False)
+                signal, listen=listen, broadcast=broadcast)
 
         if listen:
             # Create an event handler to wrap the signal and add it to
@@ -191,16 +202,4 @@ class SimpleSignalConnection(BaseSignalConnection):
 
         self.event_signal.send(sender=self, event=name, request=self.request, **kwargs)
         return super(SignalConnection, self).on_event(name, args, kwargs)
-
-    def emit(self, name, *args, **kwargs):
-        """ 
-        Send socket.io event. This overrides the SocketConnection emit()
-        to provide for optional encoders.
-        """
-        if self.is_closed:
-            return
-
-        msg = event(self.endpoint, name, None, *args, **kwargs)
-        self.session.send_message(msg)
-
 

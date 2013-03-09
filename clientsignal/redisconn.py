@@ -35,14 +35,14 @@ class RedisSignalConnection(BaseSignalConnection):
     @classmethod
     def register_signal(cls, name, signal, listen=False, broadcast=False):
         super(RedisSignalConnection, cls).register_signal(name, 
-                signal, listen=listen, broadcast=listen)
+                signal, listen=listen, broadcast=broadcast)
 
         if listen:
             # Create an event handler to wrap the signal from a client
             # and add it to the SocketConnection's _events.
             # This treats it as if it were an @event
             def handler(conn, *args, **kwargs):
-                # log.info("LISTEN: Sending signal from client %s(%s)" % (name, kwargs))
+                log.info("LISTEN: Sending signal from client %s(%s)" % (name, kwargs))
                 # kwargs['__signal_connection__'] = conn
                 signal.send(conn.request.user, **kwargs)
 
@@ -57,7 +57,6 @@ class RedisSignalConnection(BaseSignalConnection):
             # the signal and will publish it to Redis on receipt.
             def listener_factory(name, signal):
                 def listener(sender, **kwargs):
-                    log.info("BROADCAST: Got signal %s" % name)
                     # Remove the 'signal' object from the kwargs, it's not
                     # serializable, and we don't need it.
                     del kwargs['signal']
@@ -91,9 +90,9 @@ class RedisSignalConnection(BaseSignalConnection):
     def on_close(self):
         # Since we're using a redis connection pool, disconnect the
         # client on close.
-        log.info("CLOSING REDIS SIGNAL CONNECTION " + str(self));
-        self.__redis.unsubscribe(self.__channel__)
-        self.__redis.disconnect()
+        log.info("CLOSING REDIS SIGNAL CONNECTION ? " + str(self));
+        # self.__redis.unsubscribe(self.__channel__)
+        # self.__redis.disconnect()
 
     @tornado.gen.engine
     def __channel_listen(self):
@@ -130,7 +129,6 @@ class RedisSignalConnection(BaseSignalConnection):
             # If the sender is NOT this connection (i.e. the signal
             # was received over this connection, send it on.
             if event_dict['kwargs']['sender'] != self.request.user:
+                log.info("Sending signal loaded from Redis channel: %s %s" % (event_dict['name'], event_dict['kwargs']))
                 self.send_signal(event_dict['name'], **event_dict['kwargs'])
             
-
-
