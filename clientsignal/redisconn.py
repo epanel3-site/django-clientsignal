@@ -18,14 +18,15 @@ log = logging.getLogger(__name__)
 # Redis pool
 REDIS_URL = get_backend_url_parts(app_settings.CLIENTSIGNAL_BACKEND)
 REDIS_CONNECTION_POOL = tornadoredis.ConnectionPool(
-        host=REDIS_URL.get('host', 'localhost'),
-        port=REDIS_URL.get('port', 'localhost'),
         max_connections=500,
         wait_for_available=True)
 REDIS_URL = get_backend_url_parts(app_settings.CLIENTSIGNAL_BACKEND_DEFAULT)
 
 # Redis client for publishing
-REDIS = redis.Redis()
+REDIS = redis.Redis(
+                host='epanel3-database1', port=6379)
+        # host=REDIS_URL.get('host', 'localhost'),
+        # port=REDIS_URL.get('port', 6379))
 
 class RedisSignalConnection(BaseSignalConnection):
     # The redis channel is this signalconnection's endpoint, therefore
@@ -101,12 +102,11 @@ class RedisSignalConnection(BaseSignalConnection):
     @tornado.gen.engine
     def __channel_listen(self):
         self.__redis = tornadoredis.Client(
-                host=REDIS_URL.get('host', 'localhost'),
-                port=REDIS_URL.get('port', 'localhost'),
+                host='epanel3-database1', port=6379)
                 # host=REDIS_URL.get('host', 'localhost'),
-                # port=REDIS_URL.get('post') or 6379,
+                # port=REDIS_URL.get('port', 6379) or 6379,
                 # selected_db=REDIS_URL.get('path'),
-                connection_pool=REDIS_CONNECTION_POOL)
+                # connection_pool=REDIS_CONNECTION_POOL)
         self.__redis.connect()
         yield tornado.gen.Task(self.__redis.subscribe, self.__channel__)
         self.__redis.listen(self.__load_broadcast_event)

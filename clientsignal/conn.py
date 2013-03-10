@@ -3,6 +3,9 @@
 import tornadio2
 import json
 
+from django.conf import settings
+from django.utils.importlib import import_module
+
 from django.dispatch import Signal, receiver
 from django.utils.importlib import import_module
 from django import http
@@ -98,8 +101,36 @@ class DjangoRequestSocketConnection(tornadio2.SocketConnection):
     This effectively handles authentication.
     """
 
+    def __init__(self, session, endpoint=None):
+        super(DjangoRequestSocketConnection, self).__init__(session, endpoint=endpoint)
+        self.load_middleware()
+
     def __str__(self):
         return "<%s %s>" % (self.__class__.__name__, self.request.user)
+
+    def load_middleware(self):
+        """ Based on Django BaseHandler """
+        log.info("Loading middleware")
+        for middleware_path in settings.MIDDLEWARE_CLASSES:
+            log.info(middleware_path)
+            try:
+                mw_module, mw_classname = middleware_path.rsplit('.', 1)
+            except ValueError:
+                raise exceptions.ImproperlyConfigured('%s isn\'t a middleware module' % middleware_path)
+            try:
+                mod = import_module(mw_module)
+            except ImportError, e:
+                raise exceptions.ImproperlyConfigured('Error importing middleware %s: "%s"' % (mw_module, e))
+            try:
+                mw_class = getattr(mod, mw_classname)
+            except AttributeError:
+                raise exceptions.ImproperlyConfigured('Middleware module "%s" does not define a "%s" class' % (mw_module, mw_classname))
+            try:
+                mw_instance = mw_class()
+            except exceptions.MiddlewareNotUsed:
+                continue
+
+            # We're not going to do anything else for now... 
 
     def on_open(self, connection_info):
         self.request = build_request(connection_info)

@@ -46,6 +46,11 @@ class Command(BaseCommand):
             dest='use_django', 
             default=False,
             help="Serve the full Django application."),
+        make_option('--flash',
+            action='store_true',
+            dest='start_flashpolicy',
+            default=False,
+            help="Start the flash policy server."),
         make_option('--static', 
             action='store_true',
             dest='use_static', 
@@ -144,7 +149,8 @@ class Command(BaseCommand):
                     socket_io_port = base_port,
             )
 
-            if 'flashsocket' in app_settings.CLIENTSIGNAL_PROTOCOLS:
+            start_flashpolicy = options.get('start_flashpolicy', False)
+            if 'flashsocket' in app_settings.CLIENTSIGNAL_PROTOCOLS and start_flashpolicy:
                 application.settings['flash_policy_port'] = app_settings.CLIENTSIGNAL_FLASH_POLICY_PORT
                 application.settings['flash_policy_file'] = os.path.join(
                         settings.STATIC_ROOT, 'clientsignal', 'flash', 'flashpolicy.xml')
@@ -169,7 +175,7 @@ class Command(BaseCommand):
                 "settings": settings.SETTINGS_MODULE,
                 "ports": ", ".join(self.ports),
             })
-            if 'flashsocket' in app_settings.CLIENTSIGNAL_PROTOCOLS:
+            if 'flashsocket' in app_settings.CLIENTSIGNAL_PROTOCOLS and start_flashpolicy:
                 self.stdout.write((
                     "Flash policy server is running on port %(flash_port)s.\n"
                 ) % {
