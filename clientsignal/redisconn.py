@@ -16,7 +16,11 @@ import logging
 log = logging.getLogger(__name__)
 
 # Redis pool
-REDIS_CONNECTION_POOL = tornadoredis.ConnectionPool(max_connections=500,
+REDIS_URL = get_backend_url_parts(app_settings.CLIENTSIGNAL_BACKEND)
+REDIS_CONNECTION_POOL = tornadoredis.ConnectionPool(
+        host=REDIS_URL.get('host', 'localhost'),
+        port=REDIS_URL.get('port', 'localhost'),
+        max_connections=500,
         wait_for_available=True)
 REDIS_URL = get_backend_url_parts(app_settings.CLIENTSIGNAL_BACKEND_DEFAULT)
 
@@ -97,6 +101,8 @@ class RedisSignalConnection(BaseSignalConnection):
     @tornado.gen.engine
     def __channel_listen(self):
         self.__redis = tornadoredis.Client(
+                host=REDIS_URL.get('host', 'localhost'),
+                port=REDIS_URL.get('port', 'localhost'),
                 # host=REDIS_URL.get('host', 'localhost'),
                 # port=REDIS_URL.get('post') or 6379,
                 # selected_db=REDIS_URL.get('path'),

@@ -51,7 +51,7 @@ def get_backend_url_parts(url):
     parts_dict = {
                   'scheme': parts.scheme,
                   'host': getattr(parts, 'host', 'localhost'),
-                  'port': unquote(parts.port or '') or None,
+                  'port': parts.port,
                   'username': unquote(parts.username  or ''),
                   'password': unquote(parts.password or ''),
                   'path': path[1:] if path and path[0] == '/' else path,
