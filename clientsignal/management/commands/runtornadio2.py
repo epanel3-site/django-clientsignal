@@ -99,19 +99,6 @@ class Command(BaseCommand):
         
         self.stdout.write("Validating models...\n\n")
         self.validate(display_num_errors=True)
-        self.stdout.write((
-            "%(started_at)s\n"
-            "Django version %(version)s, using settings %(settings)r\n"
-            "Development server is running on ports %(ports)s\n"
-            "Quit the server with %(quit_command)s.\n"
-        ) % {
-            "started_at": datetime.now().strftime('%B %d, %Y - %X'),
-            "version": self.get_version(),
-            "settings": settings.SETTINGS_MODULE,
-            "ports": ", ".join(self.ports),
-            "quit_command": quit_command,
-        })
-
         translation.activate(settings.LANGUAGE_CODE)
 
         # Run Django from Tornado
@@ -161,7 +148,7 @@ class Command(BaseCommand):
                 application.settings['flash_policy_port'] = app_settings.CLIENTSIGNAL_FLASH_POLICY_PORT
                 application.settings['flash_policy_file'] = os.path.join(
                         settings.STATIC_ROOT, 'clientsignal', 'flash', 'flashpolicy.xml')
-                
+
             io_loop = tornado.ioloop.IOLoop.instance()
             server = tornadio2.SocketServer(application, 
                     io_loop = io_loop, auto_start = False) 
@@ -172,8 +159,30 @@ class Command(BaseCommand):
                              port)
                 server.listen(port)
 
+            self.stdout.write((
+                "%(started_at)s\n"
+                "Django version %(version)s, using settings %(settings)r\n"
+                "Tornadio2 Server is running on ports %(ports)s\n"
+            ) % {
+                "started_at": datetime.now().strftime('%B %d, %Y - %X'),
+                "version": self.get_version(),
+                "settings": settings.SETTINGS_MODULE,
+                "ports": ", ".join(self.ports),
+            })
+            if 'flashsocket' in app_settings.CLIENTSIGNAL_PROTOCOLS:
+                self.stdout.write((
+                    "Flash policy server is running on port %(flash_port)s.\n"
+                ) % {
+                    "flash_port": str(app_settings.CLIENTSIGNAL_FLASH_POLICY_PORT),
+                })
+            self.stdout.write((
+                "Quit the server with %(quit_command)s.\n"
+            ) % {
+                "quit_command": quit_command,
+            })
 
             io_loop.start()
+
 
         except KeyboardInterrupt:
             if shutdown_message:
