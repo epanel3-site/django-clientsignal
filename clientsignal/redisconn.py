@@ -7,7 +7,7 @@ import tornadoredis
 import json
 
 import clientsignal.settings as app_settings
-from clientsignal.conn import BaseSignalConnection
+from clientsignal.conn import BaseSignalConnection, json_event
 
 from clientsignal.utils import get_class_or_func
 from clientsignal.utils import get_backend_url_parts
@@ -18,15 +18,16 @@ log = logging.getLogger(__name__)
 # Redis pool
 REDIS_URL = get_backend_url_parts(app_settings.CLIENTSIGNAL_BACKEND)
 REDIS_CONNECTION_POOL = tornadoredis.ConnectionPool(
-        max_connections=500,
+        max_connections=40,
         wait_for_available=True)
 REDIS_URL = get_backend_url_parts(app_settings.CLIENTSIGNAL_BACKEND_DEFAULT)
 
 # Redis client for publishing
-REDIS = redis.Redis(
-                host='epanel3-database1', port=6379)
-        # host=REDIS_URL.get('host', 'localhost'),
-        # port=REDIS_URL.get('port', 6379))
+REDIS = tornadoredis.Client(
+                host=REDIS_URL.get('host', 'localhost'),
+                port=REDIS_URL.get('port', 6379) or 6379,
+                connection_pool=REDIS_CONNECTION_POOL)
+REDIS.connect()
 
 class RedisSignalConnection(BaseSignalConnection):
     # The redis channel is this signalconnection's endpoint, therefore
@@ -67,9 +68,9 @@ class RedisSignalConnection(BaseSignalConnection):
                     del kwargs['signal']
                     kwargs['sender'] = sender
 
-                    json_event = json.dumps({'name':name, 'kwargs':kwargs}, cls=get_class_or_func(app_settings.CLIENTSIGNAL_DEFAULT_ENCODER))
-                    log.info("BROADCAST: Sending %s(%s) signal to Redis channel %s" % (name, json_event, cls.__channel__))
-                    REDIS.publish(cls.__channel__, json_event)
+                    json_evt = json.dumps({'name':name, 'args':kwargs}, cls=get_class_or_func(app_settings.CLIENTSIGNAL_DEFAULT_ENCODER))
+                    log.info("BROADCAST: Sending %s(%s) signal to Redis channel %s" % (name, json_evt, cls.__channel__))
+                    REDIS.publish(cls.__channel__, "%s:%s" % (name, json_evt))
 
                 return listener
 
@@ -90,51 +91,39 @@ class RedisSignalConnection(BaseSignalConnection):
         super(RedisSignalConnection, self).on_open(connection_info)
 
         # Fire up the redis connection
-        self.__channel_listen()
+        self.__redis_listen()
         
     def on_close(self):
         # Since we're using a redis connection pool, disconnect the
         # client on close.
         log.info("CLOSING REDIS SIGNAL CONNECTION ? " + str(self));
-        # self.__redis.unsubscribe(self.__channel__)
-        # self.__redis.disconnect()
+        self.__redis.unsubscribe(self.__channel__)
+        self.__redis.disconnect()
 
     @tornado.gen.engine
-    def __channel_listen(self):
+    def __redis_listen(self):
         self.__redis = tornadoredis.Client(
-                host='epanel3-database1', port=6379)
-                # host=REDIS_URL.get('host', 'localhost'),
-                # port=REDIS_URL.get('port', 6379) or 6379,
-                # selected_db=REDIS_URL.get('path'),
-                # connection_pool=REDIS_CONNECTION_POOL)
+                host=REDIS_URL.get('host', 'localhost'),
+                port=REDIS_URL.get('port', 6379) or 6379,
+                connection_pool=REDIS_CONNECTION_POOL)
         self.__redis.connect()
         yield tornado.gen.Task(self.__redis.subscribe, self.__channel__)
-        self.__redis.listen(self.__load_broadcast_event)
+        self.__redis.listen(self.__on_redis_message)
 
-    def __load_broadcast_event(self, message):
+    def __on_redis_message(self, message):
         # XXX: Effectively, what this does is un-json so we can re-json
         # in a different form. Surely there's a more efficient way.
         if message.kind != 'message':
             return
 
-        # 'message' is a tornadoredis.client.Message
-        json_event = message.body
-
         log.info("Loading Signal from Redis channel %s: %s" %
-                (self.__channel__, json_event))
+                (self.__channel__, message.body))
 
-        # Load the event from json and fire of the on_event handler.
-        # Every event should have a name and kwargs
-        # event_dict = {'name': 'myevent', kwargs':{}}
-        event_dict = json.loads(json_event,
-                object_hook=get_class_or_func(app_settings.CLIENTSIGNAL_OBJECT_HOOK))
+        # 'message' is a tornadoredis.client.Message
+        name, json_evt = message.body.split(':', 1)
 
-        # If this is a broadcast signal we recognize, send it to the
-        # client.
-        if event_dict['name'] in self.__broadcast_signals__:
-            # If the sender is NOT this connection (i.e. the signal
-            # was received over this connection, send it on.
-            if event_dict['kwargs']['sender'] != self.request.user:
-                log.info("Sending signal loaded from Redis channel: %s %s" % (event_dict['name'], event_dict['kwargs']))
-                self.send_signal(event_dict['name'], **event_dict['kwargs'])
-            
+        if name in self.__broadcast_signals__:
+            log.info("Sending signal loaded from Redis channel: %s %s" % (name, json_evt))
+            msg = json_event(self.endpoint, name, None, json_evt)
+            self.session.send_message(msg)
+

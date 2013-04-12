@@ -45,6 +45,16 @@ def event(endpoint, name, message_id, *args, **kwargs):
             cls=get_class_or_func(app_settings.CLIENTSIGNAL_DEFAULT_ENCODER))
     )
 
+def json_event(endpoint, name, message_id, json_evt):
+    """ Generate an event message based on already json'ed arguments. """
+
+    return u'5:%s:%s:%s' % (
+        message_id or '',
+        endpoint or '',
+        json_evt
+    )
+    
+
 # XXX: Monkeypatch this back in. I dislike doing this.
 tornadio2.conn.event = event
 
@@ -58,7 +68,6 @@ tornadio2.proto.json_load = json_load
 
 class SignalEncoder(json.JSONEncoder):
     def default(self, obj):
-        print "ENCODING", obj
         if isinstance(obj, BaseSignalConnection):
             d = {'user': obj.request.user.username}
             return d
