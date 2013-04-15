@@ -70,7 +70,10 @@ class RedisSignalConnection(BaseSignalConnection):
 
                     json_evt = json.dumps({'name':name, 'args':kwargs}, cls=get_class_or_func(app_settings.CLIENTSIGNAL_DEFAULT_ENCODER))
                     log.info("BROADCAST: Sending %s(%s) signal to Redis channel %s" % (name, json_evt, cls.__channel__))
-                    REDIS.publish(cls.__channel__, "%s:%s" % (name, json_evt))
+                    try:
+                        REDIS.publish(cls.__channel__, "%s:%s" % (name, json_evt))
+                    except Exception, e:
+                        log.error("Cannot publish to redis: %s" % e);
 
                 return listener
 
@@ -123,6 +126,7 @@ class RedisSignalConnection(BaseSignalConnection):
         name, json_evt = message.body.split(':', 1)
 
         if name in self.__broadcast_signals__:
+            log.info("On connection %s" % self)
             log.info("Sending signal loaded from Redis channel: %s %s" % (name, json_evt))
             msg = json_event(self.endpoint, name, None, json_evt)
             self.session.send_message(msg)
