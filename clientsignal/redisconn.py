@@ -53,7 +53,7 @@ class RedisSignalConnection(BaseSignalConnection):
                 signal.send(conn.request.user, **kwargs)
 
             if name not in cls._events:
-                log.info("Registering signal to listen from client %s" % name)
+                log.debug("Registering signal to listen from client %s" % name)
                 cls._events[name] = handler
 
         if broadcast:
@@ -80,7 +80,7 @@ class RedisSignalConnection(BaseSignalConnection):
             # Receive the signal within Django and publish it to the Redis
             # channel for this connection.
             if name not in cls.__broadcast_listeners__:
-                log.info("Registering signal for broadcast to client %s" % name)
+                log.debug("Registering signal for broadcast to client %s" % name)
 
                 listener = listener_factory(name, signal)
                 cls.__broadcast_listeners__[name] = listener
