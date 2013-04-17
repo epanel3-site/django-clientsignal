@@ -69,7 +69,7 @@ class RedisSignalConnection(BaseSignalConnection):
                     kwargs['sender'] = sender
 
                     json_evt = json.dumps({'name':name, 'args':kwargs}, cls=get_class_or_func(app_settings.CLIENTSIGNAL_DEFAULT_ENCODER))
-                    log.info("BROADCAST: Sending %s(%s) signal to Redis channel %s" % (name, json_evt, cls.__channel__))
+                    log.info("BROADCAST: Encoding and Sending %s(%s) signal to Redis channel %s" % (name, json_evt, cls.__channel__))
                     try:
                         REDIS.publish(cls.__channel__, "%s:%s" % (name, json_evt))
                     except Exception, e:
@@ -119,15 +119,15 @@ class RedisSignalConnection(BaseSignalConnection):
         if message.kind != 'message':
             return
 
-        log.info("Loading Signal from Redis channel %s: %s" %
-                (self.__channel__, message.body))
+        # log.info("Loading JSON Signal from Redis channel %s: %s" %
+        #         (self.__channel__, message.body))
 
         # 'message' is a tornadoredis.client.Message
         name, json_evt = message.body.split(':', 1)
 
         if name in self.__broadcast_signals__:
             log.info("On connection %s" % self)
-            log.info("Sending signal loaded from Redis channel: %s %s" % (name, json_evt))
+            log.info("Sending JSON signal loaded from Redis channel: %s %s %s" % (self, name, json_evt))
             msg = json_event(self.endpoint, name, None, json_evt)
             self.session.send_message(msg)
 
