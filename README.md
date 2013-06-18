@@ -37,6 +37,8 @@ The corrosponding Javascript would be:
         sock.emit('ping', {'ping': 'stringping'});
     });
 
+Support is included for TornadIO2/socket.io endpoints.
+
 Requirements
 ------------
 

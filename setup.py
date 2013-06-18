@@ -15,7 +15,7 @@ setup(
     author='Will Barton',
     author_email='willbarton@gmail.com',
     description='TornadIO2-based mechanism for sending and receiving Django signals as socket.io client-side events.',
-    long_description=open('README.txt').read(),
+    long_description=open('README.md').read(),
     url='http://github.com/gulielmus/django-clientsignal',
     install_requires=["tornadio2", "redis", "tornado-redis"],
     include_package_data=True,
