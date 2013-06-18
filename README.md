@@ -1,17 +1,18 @@
 Django Client Signals
+=====================
 
 This is an experiment and proof-of-concept at the moment. I really don't recommend using it for anything serious.
 
 TornadIO2-based mechanism for sending and receiving Django signals as 
-socket.io client-side events.
+socket.io client-side events:
 
     # Create Signals
     ping = Signal(providing_args=["ping"])
     pong = Signal(providing_args=["pong"])
 
-    # Register them as client send/receivable
-    clientsignal.register('pong', pong)
-    clientsignal.register('ping', ping)
+    # Register them to broadcast to clients or listen to clients
+    clientsignal.broadcast('pong', pong)
+    clientsignal.listen('ping', ping)
 
     # Define a normal Django signal receiver for the remote signal
     @receiver(ping)
@@ -36,4 +37,9 @@ The corrosponding Javascript would be:
         sock.emit('ping', {'ping': 'stringping'});
     });
 
+Requirements
+------------
+
+* tornadio2
+* tornado-redis (for Redis support)
 
