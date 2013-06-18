@@ -17,16 +17,14 @@ log = logging.getLogger(__name__)
 
 # Redis pool
 REDIS_URL = get_backend_url_parts(app_settings.CLIENTSIGNAL_BACKEND)
-REDIS_CONNECTION_POOL = tornadoredis.ConnectionPool(
-        max_connections=40,
-        wait_for_available=True)
-REDIS_URL = get_backend_url_parts(app_settings.CLIENTSIGNAL_BACKEND_DEFAULT)
+# REDIS_CONNECTION_POOL = tornadoredis.ConnectionPool(
+#         max_connections=40,
+#         wait_for_available=True)
 
 # Redis client for publishing
 REDIS = tornadoredis.Client(
                 host=REDIS_URL.get('host', 'localhost'),
-                port=REDIS_URL.get('port', 6379) or 6379,
-                connection_pool=REDIS_CONNECTION_POOL)
+                port=REDIS_URL.get('port', 6379) or 6379)
 REDIS.connect()
 
 class RedisSignalConnection(BaseSignalConnection):
@@ -91,24 +89,22 @@ class RedisSignalConnection(BaseSignalConnection):
                 signal.connect(listener, weak=False)
 
     def on_open(self, connection_info):
-        super(RedisSignalConnection, self).on_open(connection_info)
-
         # Fire up the redis connection
         self.__redis_listen()
+
+        super(RedisSignalConnection, self).on_open(connection_info)
         
     def on_close(self):
         # Since we're using a redis connection pool, disconnect the
         # client on close.
         log.info("CLOSING REDIS SIGNAL CONNECTION ? " + str(self));
-        self.__redis.unsubscribe(self.__channel__)
         self.__redis.disconnect()
 
     @tornado.gen.engine
     def __redis_listen(self):
         self.__redis = tornadoredis.Client(
                 host=REDIS_URL.get('host', 'localhost'),
-                port=REDIS_URL.get('port', 6379) or 6379,
-                connection_pool=REDIS_CONNECTION_POOL)
+                port=REDIS_URL.get('port', 6379) or 6379)
         self.__redis.connect()
         yield tornado.gen.Task(self.__redis.subscribe, self.__channel__)
         self.__redis.listen(self.__on_redis_message)
@@ -126,8 +122,7 @@ class RedisSignalConnection(BaseSignalConnection):
         name, json_evt = message.body.split(':', 1)
 
         if name in self.__broadcast_signals__:
-            log.info("On connection %s" % self)
-            log.info("Sending JSON signal loaded from Redis channel: %s %s %s" % (self, name, json_evt))
+            log.info("Sending JSON signal from Redis: %s %s %s" % (self, name, json_evt))
             msg = json_event(self.endpoint, name, None, json_evt)
             self.session.send_message(msg)
 

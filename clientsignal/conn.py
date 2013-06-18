@@ -115,13 +115,13 @@ class DjangoRequestSocketConnection(tornadio2.SocketConnection):
         self.load_middleware()
 
     def __str__(self):
-        return "<%s %s>" % (self.__class__.__name__, self.request.user)
+        return "<%s %s %s %s>" % (self.__class__.__name__,
+                self.endpoint, self.request.user, id(self))
 
     def load_middleware(self):
         """ Based on Django BaseHandler """
-        log.info("Loading middleware")
+        log.debug("Loading middleware")
         for middleware_path in settings.MIDDLEWARE_CLASSES:
-            log.info(middleware_path)
             try:
                 mw_module, mw_classname = middleware_path.rsplit('.', 1)
             except ValueError:
@@ -143,8 +143,10 @@ class DjangoRequestSocketConnection(tornadio2.SocketConnection):
 
     def on_open(self, connection_info):
         self.request = build_request(connection_info)
-        log.info("Opened " + str(self.request.user))
-       
+        log.info("Opened " + str(self))
+           
+    def on_close(self):
+        log.info("Closed " + str(self))
 
 class BaseSignalConnection(DjangoRequestSocketConnection):
 
