@@ -9,10 +9,7 @@ from clientsignal.conn import SignalEncoder
  
 import clientsignal.settings as app_settings
  
-if app_settings.CLIENTSIGNAL_BACKEND.startswith('redis'):
-    SignalConnection = RedisSignalConnection
-else:
-    SignalConnection = SimpleSignalConnection
+SignalConnection = SimpleSignalConnection
 
 __all__ = [
             'register', 

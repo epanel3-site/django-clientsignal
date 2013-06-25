@@ -115,8 +115,12 @@ class DjangoRequestSocketConnection(tornadio2.SocketConnection):
         self.load_middleware()
 
     def __str__(self):
-        return "<%s %s %s %s>" % (self.__class__.__name__,
-                self.endpoint, self.request.user, id(self))
+        try:
+            return "<%s %s %s %s>" % (self.__class__.__name__,
+                    self.endpoint, self.request.user, id(self))
+        except AttributeError:
+            return "<%s %s %s>" % (self.__class__.__name__,
+                    self.endpoint, id(self))
 
     def load_middleware(self):
         """ Based on Django BaseHandler """
@@ -177,7 +181,7 @@ class BaseSignalConnection(DjangoRequestSocketConnection):
         kwargs. This function simply wraps the tornadio2.SocketConnection 
         emit() function for possible overrides. 
         """
-        log.info("Sending signal named " + name)
+        log.debug("Sending signal named " + name)
         self.emit(name, **kwargs)
 
     def emit(self, name, *args, **kwargs):
@@ -203,7 +207,8 @@ class SimpleSignalConnection(BaseSignalConnection):
             # Create an event handler to wrap the signal and add it to
             # the SocketConnection's _events.
             def handler(conn, *args, **kwargs):
-                log.info("Sending signal from client %s(%s)" % (name, kwargs))
+                log.info(str(conn) + " received signal " + name)
+                
                 # kwargs['__signal_connection__'] = conn
                 signal.send(conn.request.user, **kwargs)
 
