@@ -50,7 +50,7 @@ def get_backend_url_parts(url):
     
     parts_dict = {
                   'scheme': parts.scheme,
-                  'host': getattr(parts, 'host', 'localhost'),
+                  'host': getattr(parts, 'hostname', 'localhost'),
                   'port': parts.port,
                   'username': unquote(parts.username  or ''),
                   'password': unquote(parts.password or ''),
