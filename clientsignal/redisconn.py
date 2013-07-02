@@ -17,9 +17,6 @@ log = logging.getLogger(__name__)
 
 # Redis pool
 REDIS_URL = get_backend_url_parts(app_settings.CLIENTSIGNAL_BACKEND)
-# REDIS_CONNECTION_POOL = tornadoredis.ConnectionPool(
-#         max_connections=40,
-#         wait_for_available=True)
 
 # Redis client for publishing
 REDIS = tornadoredis.Client(
@@ -46,7 +43,8 @@ class RedisSignalConnection(BaseSignalConnection):
             # and add it to the SocketConnection's _events.
             # This treats it as if it were an @event
             def handler(conn, *args, **kwargs):
-                log.info("LISTEN: Sending signal from client %s(%s)" % (name, kwargs))
+                # log.debug("LISTEN: Sending signal from client %s(%s)" % (name, kwargs))
+                log.info(str(conn) + " received signal " + name)
                 # kwargs['__signal_connection__'] = conn
                 signal.send(conn.request.user, **kwargs)
 
@@ -67,7 +65,7 @@ class RedisSignalConnection(BaseSignalConnection):
                     kwargs['sender'] = sender
 
                     json_evt = json.dumps({'name':name, 'args':kwargs}, cls=get_class_or_func(app_settings.CLIENTSIGNAL_DEFAULT_ENCODER))
-                    log.info("BROADCAST: Encoding and Sending %s(%s) signal to Redis channel %s" % (name, json_evt, cls.__channel__))
+                    log.debug("BROADCAST: Encoding and Sending %s(%s) signal to Redis channel %s" % (name, json_evt, cls.__channel__))
                     try:
                         REDIS.publish(cls.__channel__, "%s:%s" % (name, json_evt))
                     except Exception, e:
@@ -85,7 +83,6 @@ class RedisSignalConnection(BaseSignalConnection):
 
                 # We don't want a weakref to the handler function, we don't
                 # want it garbage collected.
-                # log.info("BROADCAST: %s Listening for %s" % (cls.__name__, name))
                 signal.connect(listener, weak=False)
 
     def on_open(self, connection_info):
@@ -97,7 +94,7 @@ class RedisSignalConnection(BaseSignalConnection):
     def on_close(self):
         # Since we're using a redis connection pool, disconnect the
         # client on close.
-        log.info("CLOSING REDIS SIGNAL CONNECTION ? " + str(self));
+        log.debug("Closing Redis Signal Connection " + str(self));
         self.__redis.disconnect()
 
     @tornado.gen.engine
@@ -115,14 +112,10 @@ class RedisSignalConnection(BaseSignalConnection):
         if message.kind != 'message':
             return
 
-        # log.info("Loading JSON Signal from Redis channel %s: %s" %
-        #         (self.__channel__, message.body))
-
-        # 'message' is a tornadoredis.client.Message
         name, json_evt = message.body.split(':', 1)
 
         if name in self.__broadcast_signals__:
-            log.info("Sending JSON signal from Redis: %s %s %s" % (self, name, json_evt))
+            log.debug("Sending JSON signal from Redis: %s %s %s" % (self, name, json_evt))
             msg = json_event(self.endpoint, name, None, json_evt)
             self.session.send_message(msg)
 
