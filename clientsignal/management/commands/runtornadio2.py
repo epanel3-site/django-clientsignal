@@ -51,6 +51,12 @@ class Command(BaseCommand):
             dest='start_flashpolicy',
             default=False,
             help="Start the flash policy server."),
+        make_option('--flashport',
+            action="store",
+            type="int",
+            dest="flash_port",
+            default=10843,
+            help="Port for the flash policy server"),
         make_option('--static', 
             action='store_true',
             dest='use_static', 
@@ -150,8 +156,10 @@ class Command(BaseCommand):
             )
 
             start_flashpolicy = options.get('start_flashpolicy', False)
+            flash_port = options.get('flash_port', app_settings.CLIENTSIGNAL_FLASH_POLICY_PORT)
             if 'flashsocket' in app_settings.CLIENTSIGNAL_PROTOCOLS and start_flashpolicy:
-                application.settings['flash_policy_port'] = app_settings.CLIENTSIGNAL_FLASH_POLICY_PORT
+                # application.settings['flash_policy_port'] = app_settings.CLIENTSIGNAL_FLASH_POLICY_PORT
+                application.settings['flash_policy_port'] = flash_port
                 application.settings['flash_policy_file'] = os.path.join(
                         settings.STATIC_ROOT, 'clientsignal', 'flash', 'flashpolicy.xml')
 
