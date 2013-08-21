@@ -201,7 +201,7 @@ class SimpleSignalConnection(BaseSignalConnection):
     def on_close(self):
         # Disconnect signals that this connection was listening to.
         for name, signal in self.broadcast_signals.items():
-            listener = self._listener[name]
+            listener = self._listeners[name]
             signal.disconnect(listener, weak=False)
 
         super(SimpleSignalConnection, self).on_close();

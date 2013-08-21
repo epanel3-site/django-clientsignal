@@ -52,11 +52,13 @@ def json_decode(data):
 sockjs.tornado.proto.json_encode = json_encode
 sockjs.tornado.proto.json_decode = json_decode
 
+
 # Create an "event", which is basically a message that encapsulates a
 # name and some keyword arguments. Presently, only kwargs are used.
-def encode_event(name, *args, **kwargs):
+def encode_event(name, **kwargs):
     e = {'event':name, 'data':kwargs}
     return json_encode(e);
+
 
 # An exception specially for events
 class EventException(Exception):
@@ -121,6 +123,9 @@ class EventConnection(sockjs.tornado.SockJSConnection):
     def send(self, name, **kwargs):
         event = encode_event(name, **kwargs)
         super(EventConnection, self).send(event)
+
+    def send_raw(self, raw_data):
+        super(EventConnection, self).send(raw_data)
 
     # socket.io nomenclature?
     def emit(self, name, **kwargs):
