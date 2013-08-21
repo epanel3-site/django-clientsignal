@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2012 Will Barton. 
+# Copyright 2012-2013 Will Barton. 
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without 
@@ -36,6 +36,25 @@ import logging
 log = logging.getLogger(__name__)
 
 
+class SignalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, BaseSignalConnection):
+            d = {'user': obj.request.user.username}
+            return d
+
+        if isinstance(obj, AnonymousUser):
+            return {}
+
+        if isinstance(obj, User):
+            d = {'username': obj.username}
+            return d
+
+        if isinstance(obj, http.HttpRequest):
+            return {}
+
+        return json.JSONEncoder.default(self, obj)
+
+
 def listen(name, signal, connection=None):
     """ Register the given signal with the given name to be recieved
     from client senders. """
@@ -63,7 +82,6 @@ def broadcast(name, signal, connection=None):
         connection = get_signalconnection(
                 app_settings.CLIENTSIGNAL_MULTIPLEXED_CONNECTION)
     
-
     # Register the signal with the connection so that client socket.io
     # events with the given name are sent as signals within Django when
     # received.

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2012 Will Barton. 
+# Copyright 2012-2013 Will Barton. 
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without 
@@ -27,11 +27,12 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from clientsignal.signal import register, listen, broadcast
+from clientsignal.signal import SignalEncoder
+
 from clientsignal.conn import BaseSignalConnection
 from clientsignal.conn import SimpleSignalConnection
+
 from clientsignal.redisconn import RedisSignalConnection
- 
-from clientsignal.conn import SignalEncoder
  
 import clientsignal.settings as app_settings
  

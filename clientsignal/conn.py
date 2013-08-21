@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2012 Will Barton. 
+# Copyright 2012-2013 Will Barton. 
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without 
@@ -26,9 +26,6 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import tornadio2
-import json
-
 from django.conf import settings
 from django.utils.importlib import import_module
 
@@ -42,74 +39,14 @@ import clientsignal.settings as app_settings
 from clientsignal.utils import get_signalconnection
 from clientsignal.utils import get_class_or_func
 
+from clientsignal.socket import EventConnection
+
 import logging
 log = logging.getLogger(__name__)
 
-def event(endpoint, name, message_id, *args, **kwargs):
-    """ Generate event message. This function is based on the TornadIO2
-    proto.event() function with the added option of a simplejson
-    encoder. """
-    if args:
-        evt = dict(
-            name=name,
-            args=args
-            )
 
-        if kwargs:
-            log.error('Can not generate event() with args and kwargs.')
-    else:
-        evt = dict(
-            name=name,
-            args=[kwargs]
-        )
-
-    return u'5:%s:%s:%s' % (
-        message_id or '',
-        endpoint or '',
-        json.dumps(evt,
-            cls=get_class_or_func(app_settings.CLIENTSIGNAL_DEFAULT_ENCODER))
-    )
-
-def json_event(endpoint, name, message_id, json_evt):
-    """ Generate an event message based on already json'ed arguments. """
-
-    return u'5:%s:%s:%s' % (
-        message_id or '',
-        endpoint or '',
-        json_evt
-    )
-    
-
-# XXX: Monkeypatch this back in. I dislike doing this.
-tornadio2.conn.event = event
-
-def json_load(msg):
-    """ Load json-encoded object with the configuable object hook. """
-    return json.loads(msg,
-            object_hook=get_class_or_func(app_settings.CLIENTSIGNAL_OBJECT_HOOK))
-
-# XXX: Monkeypatch this back in. I dislike doing this.
-tornadio2.proto.json_load = json_load
-
-class SignalEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, BaseSignalConnection):
-            d = {'user': obj.request.user.username}
-            return d
-
-        if isinstance(obj, AnonymousUser):
-            return {}
-
-        if isinstance(obj, User):
-            d = {'username': obj.username}
-            return d
-
-        if isinstance(obj, http.HttpRequest):
-            return {}
-
-        return json.JSONEncoder.default(self, obj)
-
-
+# Build a Django Request from the base connection info we received. This
+# should handle authentication for us through Django
 def build_request(connection_info, path = None):
     from django.contrib.sessions.backends.db import SessionStore
     
@@ -129,14 +66,14 @@ def build_request(connection_info, path = None):
     return request
 
 
-class DjangoRequestSocketConnection(tornadio2.SocketConnection):
+class DjangoRequestConnection(EventConnection):
     """ 
-    TornadIO2 SocketConnection that builds a Django request on open.
-    This effectively handles authentication.
+    Connection that builds a Django request on open, allowing Django to
+    handle authentication
     """
 
-    def __init__(self, session, endpoint=None):
-        super(DjangoRequestSocketConnection, self).__init__(session, endpoint=endpoint)
+    def __init__(self, *args, **kwargs):
+        super(DjangoRequestConnection, self).__init__(*args, **kwargs)
         self.load_middleware()
 
     def __str__(self):
@@ -177,12 +114,13 @@ class DjangoRequestSocketConnection(tornadio2.SocketConnection):
     def on_close(self):
         log.info("Closed " + str(self))
 
-class BaseSignalConnection(DjangoRequestSocketConnection):
+
+class BaseSignalConnection(DjangoRequestConnection):
 
     # When register() is called for a specific connection, the signals
     # being registered are stored here.
-    __listen_signals__ = {}
-    __broadcast_signals__ = {}
+    listen_signals = {}
+    broadcast_signals = {}
     
     @classmethod
     def register_signal(cls, name, signal, listen=False, broadcast=False):
@@ -192,36 +130,27 @@ class BaseSignalConnection(DjangoRequestSocketConnection):
         or both. 
 
         Signals that are listened for from the client are wrapped
-        similarly to TornadIO2's @event()s. 
+        as EventConnection events.
         """
-        if listen and name not in cls.__listen_signals__:
-            cls.__listen_signals__[name] = signal
+        if listen and name not in cls.listen_signals:
+            cls.listen_signals[name] = signal
 
-        if broadcast and name not in cls.__broadcast_signals__:
-            cls.__broadcast_signals__[name] = signal
+        if broadcast and name not in cls.broadcast_signals:
+            cls.broadcast_signals[name] = signal
             
     def send_signal(self, name, **kwargs):
         """ 
         Send a signal to the client with the given names and the given 
-        kwargs. This function simply wraps the tornadio2.SocketConnection 
-        emit() function for possible overrides. 
+        kwargs. This function simply wraps the EventConnection send()
+        method.
         """
         log.debug("Sending signal named " + name)
-        self.emit(name, **kwargs)
-
-    def emit(self, name, *args, **kwargs):
-        """ 
-        Send socket.io event. This overrides the SocketConnection emit()
-        to provide for optional encoders.
-        """
-        if self.is_closed:
-            return
-
-        msg = event(self.endpoint, name, None, *args, **kwargs)
-        self.session.send_message(msg)
+        self.send(name, **kwargs)
 
     
 class SimpleSignalConnection(BaseSignalConnection):
+
+    _listeners = {}
 
     @classmethod
     def register_signal(cls, name, signal, listen=False, broadcast=False):
@@ -238,14 +167,13 @@ class SimpleSignalConnection(BaseSignalConnection):
                 signal.send(conn.request.user, **kwargs)
 
             cls._events[name] = handler
-
     
     def on_open(self, connection_info):
         super(SimpleSignalConnection, self).on_open(connection_info)
 
         # Generate a listener function for the given signal with the
-        # given name and return it. That function will handle "emitting"
-        # the signal as a socket.io event on this connection.
+        # given name and return it. That function will handle sending 
+        # the signal as an event on this connection.
         def listener_factory(name, signal):
             def listener(sender, **kwargs):
                 # Remove the 'signal' object from the kwargs, it's not
@@ -263,15 +191,18 @@ class SimpleSignalConnection(BaseSignalConnection):
 
         # Receive the signal within Django and send it to the client as a
         # socket.io event.
-        for name, signal in self.__broadcast_signals__.items():
+        for name, signal in self.broadcast_signals.items():
             listener = listener_factory(name, signal)
+            self._listeners[name] = listener
             # We don't want a weakref to the handler function, we don't
             # want it garbage collected.
             signal.connect(listener, weak=False)
 
-    def on_event(self, name, args=[], kwargs=dict()):
-        """ Receive socket.io events and send Django Signals. """
+    def on_close(self):
+        # Disconnect signals that this connection was listening to.
+        for name, signal in self.broadcast_signals.items():
+            listener = self._listener[name]
+            signal.disconnect(listener, weak=False)
 
-        self.event_signal.send(sender=self, event=name, request=self.request, **kwargs)
-        return super(SignalConnection, self).on_event(name, args, kwargs)
+        super(SimpleSignalConnection, self).on_close();
 
