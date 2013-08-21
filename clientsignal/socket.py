@@ -1,22 +1,51 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2013 Will Barton. 
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without 
+# modification, are permitted provided that the following conditions
+# are met:
+# 
+#   1. Redistributions of source code must retain the above copyright 
+#      notice, this list of conditions and the following disclaimer.
+#   2. Redistributions in binary form must reproduce the above copyright 
+#      notice, this list of conditions and the following disclaimer in the 
+#      documentation and/or other materials provided with the distribution.
+#   3. The name of the author may not be used to endorse or promote products
+#      derived from this software without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+# INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+# AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL
+# THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import tornado.ioloop
-import tornado.web
-from sockjs.tornado import SockJSRouter
-
-######
+import clientsignal.settings as app_settings
 
 import sockjs.tornado
 import simplejson
 from inspect import ismethod, getmembers
 
+# First we need to override the json_endcode and json_decode functions
+# that sockjs-tornado uses to 
+
 def json_encode(data):
     """ Encode the object with the configuable object hook. """
     return simplejson.dumps(data,
-            separators=(',', ':'))
+            separators=(',', ':'),
+            cls=get_class_or_func(app_settings.CLIENTSIGNAL_DEFAULT_ENCODER))
 
 def json_decode(data):
     """ Decode the object with the configuable object hook. """
-    return simplejson.loads(data)
+    return simplejson.loads(data,
+            object_hook=get_class_or_func(app_settings.CLIENTSIGNAL_OBJECT_HOOK))
+
 
 # XXX: Monkeypatch these in. I dislike doing this, but there's no other
 # means to provide custom json encoding/decoding.
@@ -28,7 +57,6 @@ sockjs.tornado.proto.json_decode = json_decode
 def encode_event(name, *args, **kwargs):
     e = {'event':name, 'data':kwargs}
     return json_encode(e);
-
 
 # An exception specially for events
 class EventException(Exception):
@@ -50,6 +78,9 @@ class EventHandlerMeta(type):
 
 
 # A base SockJS connection class that includes multiplexing and events.
+# This connection class can only send/receive events. It doesn't send
+# plain "messages," and overriding the on_message method in a subclass
+# will break events.
 class EventConnection(sockjs.tornado.SockJSConnection):
     __metaclass__ = EventHandlerMeta
 
@@ -88,7 +119,6 @@ class EventConnection(sockjs.tornado.SockJSConnection):
             raise EventException("no handler for event %s" % e_name)
 
     def send(self, name, **kwargs):
-        print "sending", name, kwargs
         event = encode_event(name, **kwargs)
         super(EventConnection, self).send(event)
 
@@ -96,38 +126,7 @@ class EventConnection(sockjs.tornado.SockJSConnection):
     def emit(self, name, **kwargs):
         return self.send(name, **kwargs)
 
-#####
-
-class TestConnection(EventConnection):
-
-    def on_event(self, name, kwargs):
-        super(TestConnection, self).on_event(name, kwargs)
-
-    def event_echo(self, **kwargs):
-        print "got echo event", kwargs
-        self.send("echo", **kwargs)
+        
 
 
-# Index page handler
-class IndexHandler(tornado.web.RequestHandler):
-    """Regular HTTP handler to serve the chatroom page"""
-    def get(self):
-        self.render('events.html')
 
-class EventsJSHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.render('events.js')
-
-if __name__ == "__main__":
-    import logging
-    logging.getLogger().setLevel(logging.DEBUG)
-
-    # Create multiplexer
-    eventRouter = SockJSRouter(TestConnection, '/events')
-
-    # Create application
-    app = tornado.web.Application(
-            [(r"/", IndexHandler), (r"/events.js", EventsJSHandler)] + eventRouter.urls
-    )
-    app.listen(8080)
-    tornado.ioloop.IOLoop.instance().start()
