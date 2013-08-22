@@ -130,9 +130,8 @@ The management command `runsocket` takes the following arguments:
 - `--django`: Serve the full Django application
 - `--static`: Serve static files (requires --django)
 
-Note: `--static` does *not* use Tornado to serve the static files. It
-uses the Django static file handler instead. This may be changed in a
-future version. 
+Note: `--static` *uses the Django static file handler to serve static files*. 
+This may be changed in a future version. 
 
 The ideal deployment of Client Signals would have seperate processes
 running for the Django web application and the socket server, using
