@@ -118,10 +118,10 @@ per-SignalConnection basis.
 TODO
 ----
 
-- [ ] Multiplexed `SignalConnection`s
-- [ ] Custom JSON encoding/decoding for each `SignalConnection` class.
-- [ ] More Django-ish URL handling, perhaps dynamic URLs
-- [ ] Stats
+- Multiplexed `SignalConnection`s
+- Custom JSON encoding/decoding for each `SignalConnection` class.
+- More Django-ish URL handling, perhaps dynamic URLs
+- Stats
 
 From Tornadio2
 --------------
