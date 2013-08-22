@@ -1,27 +1,26 @@
 {% load clientsignal %}
 <!DOCTYPE html>
 <html>
-<head>
-  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
-  {% clientsignal_js %}
-  <script>
-    $(function() {
+  <head>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    {% clientsignal_js %}
+    <script>
+      $(function() {
         var sock = new SignalSocket('/simple');
 
         sock.on('pong', function(data) {
-            console.log("Got pong", data.pong);
-            alert("Pong " + data.pong);
+          alert("Pong " + data.pong);
         });
 
         $('a#ping').click(function(e) { 
-            e.preventDefault();
-            sock.send('ping', {'ping': 'stringping'});
+          e.preventDefault();
+          sock.send('ping', {'ping': 'stringping'});
         });
-    });
-</script>
-</head>
-<body>
-  <h3><a id="ping" href="">Ping!</a></h3>
-</body>
+      });
+    </script>
+  </head>
+  <body>
+    <h3><a id="ping" href="">Ping!</a></h3>
+  </body>
 </html>
 

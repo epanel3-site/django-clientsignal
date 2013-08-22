@@ -28,7 +28,7 @@
 
 import weakref
 
-import json
+import simplejson as json
 
 import clientsignal.settings as app_settings
 from clientsignal.utils import get_signalconnection
@@ -38,9 +38,8 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def signal_object_hook(*args, **kwargs):
-    print args, kwargs
-    return args[0]
+def signal_object_hook(parsed_dict):
+    return parsed_dict
 
 
 class SignalEncoder(json.JSONEncoder):

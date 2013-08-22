@@ -75,7 +75,7 @@ CLIENTSIGNAL_CONNECTIONS = getattr(settings,
 ## Custom JSON Encoding Settings
 CLIENTSIGNAL_JSON_ENCODER_DEFAULT = 'clientsignal.SignalEncoder'
 CLIENTSIGNAL_JSON_ENCODER = getattr(settings, 
-        'CLIENTSIGNAL_JSON_OBJECT_HOOK',
+        'CLIENTSIGNAL_JSON_ENCODER',
         CLIENTSIGNAL_JSON_ENCODER_DEFAULT)
 CLIENTSIGNAL_JSON_OBJECT_HOOK_DEFAULT = 'clientsignal.signal_object_hook'
 CLIENTSIGNAL_JSON_OBJECT_HOOK = getattr(settings, 
