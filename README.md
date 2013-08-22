@@ -9,8 +9,8 @@ and receiving Django signals as client-side events.
 
 In your Django app:
 
-    # Create a signal connection (or use clientsignal.SimpleSignalConnection)
-    class PingSignalConnection(clientsignal.SimpleSignalConnection):
+    # Create a signal connection (or use clientsignal.SignalConnection)
+    class PingSignalConnection(clientsignal.SignalConnection):
         pass
 
     # Create Signals
@@ -78,11 +78,11 @@ Configuration Options
 ### Signal Connections
 
     CLIENTSIGNAL_CONNECTIONS = {
-            '/simple': 'clientsignal.SimpleSignalConnection',
+            '/simple': 'clientsignal.SignalConnection',
     }
 
 This dictionary maps signal connection classes (which should subclass,
-at a minimum, `clientsignal.SignalConnection`) to urls that will be
+at a minimum, `clientsignal.BaseSignalConnection`) to urls that will be
 served to socket connections. 
 
 ### Backends
