@@ -113,12 +113,12 @@ global JSON encoder class and a global JSON object hook:
     CLIENTSIGNAL_JSON_OBJECT_HOOK='clientsignal.signal_object_hook'
 
 Unfortunately, these cannot currently be configured on a
-per-SignalConnection basis.
+per-SignalConnection basis. See the [`simplejson` documentation](http://simplejson.readthedocs.org/en/latest/) for more.
 
 TODO
 ----
 
-- Multiplexed `SignalConnection`s
+- Multiplexed `SignalConnection`
 - Custom JSON encoding/decoding for each `SignalConnection` class.
 - More Django-ish URL handling, perhaps dynamic URLs
 - Stats
