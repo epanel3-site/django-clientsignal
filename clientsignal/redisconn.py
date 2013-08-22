@@ -54,8 +54,6 @@ class RedisSignalConnection(BaseSignalConnection):
     # This is the redis channel of this connection.
     __channel__ = app_settings.CLIENTSIGNAL_BACKEND_OPTIONS.get('CHANNEL_PREFIX', 'clientsignal') + "_default"
 
-    broadcast_listeners = {}
-
     # This is called from the Django side.
     @classmethod
     def register_signal(cls, name, signal, listen=False, broadcast=False):
@@ -75,39 +73,35 @@ class RedisSignalConnection(BaseSignalConnection):
                 cls._events[name] = handler
 
         if broadcast:
-            ## Broadcast Signals
-            if name not in cls.broadcast_listeners:
-            
-                # Generate a listener function for the given signal with the
-                # given name and return it. This function will be connected to
-                # the signal and will publish it to Redis on receipt.
-                def listener_factory(name, signal):
-                    def listener(sender, **kwargs):
-                        # Remove the 'signal' object from the kwargs, it's not
-                        # serializable, and we don't need it.
-                        del kwargs['signal']
-                        kwargs['sender'] = sender
+            # Generate a listener function for the given signal with the
+            # given name and return it. This function will be connected to
+            # the signal and will publish it to Redis on receipt.
+            def listener_factory(name, signal):
+                def listener(sender, **kwargs):
+                    # Remove the 'signal' object from the kwargs, it's not
+                    # serializable, and we don't need it.
+                    del kwargs['signal']
+                    kwargs['sender'] = sender
 
-                        json_evt = encode_event(name, **kwargs)
-                        log.debug("BROADCAST: Encoding and Sending %s(%s) signal to Redis channel %s" % (name, json_evt, cls.__channel__))
+                    json_evt = encode_event(name, **kwargs)
+                    log.debug("BROADCAST: Encoding and Sending %s(%s) signal to Redis channel %s" % (name, json_evt, cls.__channel__))
 
-                        try:
-                            REDIS.publish(cls.__channel__, "%s:%s" % (name, json_evt))
-                        except Exception, e:
-                            log.error("Cannot publish to redis: %s" % e);
+                    try:
+                        REDIS.publish(cls.__channel__, "%s:%s" % (name, json_evt))
+                    except Exception, e:
+                        log.error("Cannot publish to redis: %s" % e);
 
-                    return listener
+                return listener
 
-                # Receive the signal within Django and publish it to the Redis
-                # channel for this connection.
-                log.debug("Registering signal for broadcast to client %s" % name)
+            # Receive the signal within Django and publish it to the Redis
+            # channel for this connection.
+            log.debug("Registering signal for broadcast to client %s" % name)
 
-                listener = listener_factory(name, signal)
-                cls.broadcast_listeners[name] = listener
+            listener = listener_factory(name, signal)
 
-                # We don't want a weakref to the handler function, we don't
-                # want it garbage collected.
-                signal.connect(listener, weak=False)
+            # We don't want a weakref to the handler function, we don't
+            # want it garbage collected.
+            signal.connect(listener, weak=False)
 
     def on_open(self, connection_info):
         # Fire up the redis connection
@@ -120,11 +114,6 @@ class RedisSignalConnection(BaseSignalConnection):
         # client on close.
         log.debug("Closing Redis Signal Connection " + str(self));
         self.__redis.disconnect()
-
-        # Disconnect signals that this connection was listening to.
-        for name, signal in self._broadcast_signals.items():
-            listener = self.broadcast_listeners[name]
-            signal.disconnect(listener, weak=False)
 
         super(RedisSignalConnection, self).on_close();
 
@@ -147,7 +136,6 @@ class RedisSignalConnection(BaseSignalConnection):
 
         if name in self._broadcast_signals:
             log.debug("Sending JSON signal from Redis: %s %s %s" % (self, name, json_evt))
-            msg = json_event(self.endpoint, name, None, json_evt)
             # This event is already json-encoded.
             self.send_raw(json_evt)
 
