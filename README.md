@@ -66,11 +66,17 @@ In your template (jQuery is used here, but not required):
     </html>
 
 
+To run (and server Django content too):
+
+    python manage.py runsocket --reload --static --django
+
+
+
 Requirements
 ------------
 
-* `sockjs-tornado`
-* `tornado-redis` (for Redis support)
+- `sockjs-tornado`
+- `tornado-redis` (for Redis support)
 
 Configuration Options
 ---------------------
@@ -114,6 +120,24 @@ global JSON encoder class and a global JSON object hook:
 
 Unfortunately, these cannot currently be configured on a
 per-SignalConnection basis. See the [`simplejson` documentation](http://simplejson.readthedocs.org/en/latest/) for more.
+
+Commands
+--------
+
+The management command `runsocket` takes the following arguments:
+
+- `--reload`: Use code change auto-reloader
+- `--django`: Serve the full Django application
+- `--static`: Serve static files (requires --django)
+
+Note: `--static` does *not* use Tornado to serve the static files. It
+uses the Django static file handler instead. This may be changed in a
+future version. 
+
+The ideal deployment of Client Signals would have seperate processes
+running for the Django web application and the socket server, using
+Redis to broker messages between them (`CLIENTSIGNAL_BACKEND`) and
+something like HAProxy on the front end. 
 
 TODO
 ----
