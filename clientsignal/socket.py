@@ -29,22 +29,30 @@
 import clientsignal.settings as app_settings
 
 import sockjs.tornado
-import simplejson
+# import simplejson as json 
+import json
+
 from inspect import ismethod, getmembers
+
+from clientsignal.utils import get_class_or_func
+
+import logging
+log = logging.getLogger(__name__)
 
 # First we need to override the json_endcode and json_decode functions
 # that sockjs-tornado uses to 
 
 def json_encode(data):
     """ Encode the object with the configuable object hook. """
-    return simplejson.dumps(data,
-            separators=(',', ':'),
-            cls=get_class_or_func(app_settings.CLIENTSIGNAL_DEFAULT_ENCODER))
+    log.info("Encoding " + unicode(data));
+    encoder_cls = get_class_or_func(app_settings.CLIENTSIGNAL_JSON_ENCODER)
+    return json.dumps(data) #, separators=(',', ':'), cls=encoder_cls)
 
 def json_decode(data):
     """ Decode the object with the configuable object hook. """
-    return simplejson.loads(data,
-            object_hook=get_class_or_func(app_settings.CLIENTSIGNAL_OBJECT_HOOK))
+    log.info("Decoding " + unicode(data));
+    object_hook = get_class_or_func(app_settings.CLIENTSIGNAL_JSON_OBJECT_HOOK)
+    return json.loads(data) #, object_hook=object_hook)
 
 
 # XXX: Monkeypatch these in. I dislike doing this, but there's no other
@@ -89,9 +97,10 @@ class EventConnection(sockjs.tornado.SockJSConnection):
     def on_message(self, message):
         try:
             json_message = json_decode(message)
-        except simplejson.scanner.JSONDecodeError:
+        except json.scanner.JSONDecodeError:
             # Not a json message.
-            raise EventException("message did not contain event")
+            log.error('Invalid event name: %s' % name)
+            # raise EventException("message did not contain event")
         else:
             # It was a json message. Check to see if it was an event.
             if isinstance(json_message, dict):
@@ -104,7 +113,8 @@ class EventConnection(sockjs.tornado.SockJSConnection):
                 else:
                     self.on_event(e_name, e_kwargs)
             else:
-                raise EventException("message did not contain event")
+                log.error('Invalid event name: %s' % name)
+                # raise EventException("message did not contain event")
 
     def on_event(self, name, kwargs=dict()):
         handler = self._events.get(name)
@@ -112,15 +122,16 @@ class EventConnection(sockjs.tornado.SockJSConnection):
             try:
                 return handler(self, **kwargs)
             except TypeError:
-                logger.error(('Attempted to call event handler %s ' +
+                log.error(('Attempted to call event handler %s ' +
                               'with %s arguments.') % (handler,
                                                        repr(kwargs)))
                 raise
         else:
-            logger.error('Invalid event name: %s' % name)
-            raise EventException("no handler for event %s" % e_name)
+            log.error('Invalid event name: %s' % name)
+            # raise EventException("no handler for event %s" % name)
 
     def send(self, name, **kwargs):
+        log.info("sending signal %s(%s)" % (name, unicode(kwargs)));
         event = encode_event(name, **kwargs)
         super(EventConnection, self).send(event)
 

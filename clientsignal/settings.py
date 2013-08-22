@@ -28,8 +28,9 @@
 
 from django.conf import settings
 
-CLIENTSIGNAL_MULTIPLEXED_CONNECTION_DEFAULT = 'clientsignal.SignalConnection'
-CLIENTSIGNAL_BASE_SIGNALCONNECTION_DEFAULT = 'clientsignal.SignalConnection'
+## Backend settings: 
+
+# Right now a redis backend is the only kind supported. 
 
 # "redis://:password@host:port/db"
 CLIENTSIGNAL_BACKEND_DEFAULT = ''
@@ -44,36 +45,57 @@ CLIENTSIGNAL_BACKEND_OPTIONS = getattr(settings,
         'CLIENTSIGNAL_BACKEND_OPTIONS',
         CLIENTSIGNAL_BACKEND_OPTIONS_DEFAULT)
 
-CLIENTSIGNAL_MULTIPLEXED_CONNECTION = getattr(settings, 
-        'CLIENTSIGNAL_MULTIPLEXED_CONNECTION',
-        CLIENTSIGNAL_MULTIPLEXED_CONNECTION_DEFAULT)
-CLIENTSIGNAL_BASE_SIGNALCONNECTION = getattr(settings, 
-        'CLIENTSIGNAL_BASE_SIGNALCONNECTION',
-        CLIENTSIGNAL_BASE_SIGNALCONNECTION_DEFAULT)
+# XXX: SockJS doesn't support multiplexing out of the box. It's
+# something we'll have to add back at some point in the future.
+#
+# CLIENTSIGNAL_MULTIPLEXED_CONNECTION_DEFAULT = 'clientsignal.SignalConnection'
+# CLIENTSIGNAL_BASE_SIGNALCONNECTION_DEFAULT = 'clientsignal.SignalConnection'
+#
+# CLIENTSIGNAL_MULTIPLEXED_CONNECTION = getattr(settings, 
+#         'CLIENTSIGNAL_MULTIPLEXED_CONNECTION',
+#         CLIENTSIGNAL_MULTIPLEXED_CONNECTION_DEFAULT)
+# CLIENTSIGNAL_BASE_SIGNALCONNECTION = getattr(settings, 
+#         'CLIENTSIGNAL_BASE_SIGNALCONNECTION',
+#         CLIENTSIGNAL_BASE_SIGNALCONNECTION_DEFAULT)
 
-CLIENTSIGNAL_DEFAULT_ENCODER_DEFAULT = 'clientsignal.SignalEncoder'
-CLIENTSIGNAL_DEFAULT_ENCODER = getattr(settings, 
-        'CLIENTSIGNAL_DEFAULT_ENCODER',
-        CLIENTSIGNAL_DEFAULT_ENCODER_DEFAULT)
+## Socket Connection settings
 
-CLIENTSIGNAL_OBJECT_HOOK_DEFAULT = 'clientsignal.signal_object_hook'
-CLIENTSIGNAL_OBJECT_HOOK = getattr(settings, 
-        'CLIENTSIGNAL_OBJECT_HOOK',
-        CLIENTSIGNAL_OBJECT_HOOK_DEFAULT)
+# List of connections and their URLs
+# Ex:
+#   CLIENTSIGNAL_CONNECTIONS = {
+#           '/appone_signals': appone.AppOneSignalConnection,
+#           '/apptwo_signals': apptwo.AppTwoSignalConnection,
+#   }
+CLIENTSIGNAL_CONNECTIONS_DEFAULT = {}
+CLIENTSIGNAL_CONNECTIONS = getattr(settings, 
+        'CLIENTSIGNAL_CONNECTIONS',
+        CLIENTSIGNAL_CONNECTIONS_DEFAULT)
 
-CLIENTSIGNAL_PROTOCOLS_DEFAULT = (
-        'websocket',
-        'flashsocket',
-        'xhr-polling',
-        'htmlfile',
-        'jsonp-polling',
-)
-CLIENTSIGNAL_PROTOCOLS = getattr(settings, 
-        'CLIENTSIGNAL_PROTOCOLS',
-        CLIENTSIGNAL_PROTOCOLS_DEFAULT)
 
-CLIENTSIGNAL_FLASH_POLICY_PORT_DEFAULT = 10843
-CLIENTSIGNAL_FLASH_POLICY_PORT = getattr(settings, 
-        'CLIENTSIGNAL_FLASH_POLICY_PORT',
-        CLIENTSIGNAL_FLASH_POLICY_PORT_DEFAULT)
+## Custom JSON Encoding Settings
+CLIENTSIGNAL_JSON_ENCODER_DEFAULT = 'clientsignal.SignalEncoder'
+CLIENTSIGNAL_JSON_ENCODER = getattr(settings, 
+        'CLIENTSIGNAL_JSON_OBJECT_HOOK',
+        CLIENTSIGNAL_JSON_ENCODER_DEFAULT)
+CLIENTSIGNAL_JSON_OBJECT_HOOK_DEFAULT = 'clientsignal.signal_object_hook'
+CLIENTSIGNAL_JSON_OBJECT_HOOK = getattr(settings, 
+        'CLIENTSIGNAL_JSON_OBJECT_HOOK',
+        CLIENTSIGNAL_JSON_OBJECT_HOOK_DEFAULT)
+
+## Socket protocol settings
+# CLIENTSIGNAL_PROTOCOLS_DEFAULT = (
+#         'websocket',
+#         'flashsocket',
+#         'xhr-polling',
+#         'htmlfile',
+#         'jsonp-polling',
+# )
+# CLIENTSIGNAL_PROTOCOLS = getattr(settings, 
+#         'CLIENTSIGNAL_PROTOCOLS',
+#         CLIENTSIGNAL_PROTOCOLS_DEFAULT)
+# 
+# CLIENTSIGNAL_FLASH_POLICY_PORT_DEFAULT = 10843
+# CLIENTSIGNAL_FLASH_POLICY_PORT = getattr(settings, 
+#         'CLIENTSIGNAL_FLASH_POLICY_PORT',
+#         CLIENTSIGNAL_FLASH_POLICY_PORT_DEFAULT)
 

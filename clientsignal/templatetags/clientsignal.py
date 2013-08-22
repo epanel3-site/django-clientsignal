@@ -26,38 +26,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import weakref
+from django import template
+from django.conf import settings
 
-import json
+register = template.Library()
 
-import clientsignal.settings as app_settings
-from clientsignal.utils import get_signalconnection
-from clientsignal.utils import get_class_or_func
+@register.simple_tag
+def clientsignal_js():
+    return """<script src="%sclientsignal/js/sockjs.min.js"></script>\n<script src="%sclientsignal/js/clientsignal.js"></script>""" % (settings.STATIC_URL, settings.STATIC_URL)
 
-import logging
-log = logging.getLogger(__name__)
-
-
-def signal_object_hook(*args, **kwargs):
-    print args, kwargs
-    return args[0]
-
-
-class SignalEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, BaseSignalConnection):
-            d = {'user': obj.request.user.username}
-            return d
-
-        if isinstance(obj, AnonymousUser):
-            return {}
-
-        if isinstance(obj, User):
-            d = {'username': obj.username}
-            return d
-
-        if isinstance(obj, http.HttpRequest):
-            return {}
-
-        return json.JSONEncoder.default(self, obj)
 

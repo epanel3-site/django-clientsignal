@@ -1,23 +1,21 @@
+{% load clientsignal %}
 <!DOCTYPE html>
 <html>
 <head>
   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
-  <script src="{{ STATIC_URL }}socket.io.js"></script>
+  {% clientsignal_js %}
   <script>
     $(function() {
-        var sock = new io.connect('http://' + window.location.host);
-
-        sock.on('disconnect', function() {
-            sock.socket.reconnect();
-        });
+        var sock = new SignalSocket('/simple');
 
         sock.on('pong', function(data) {
-            alert("Pong " + data.pong)
+            console.log("Got pong", data.pong);
+            alert("Pong " + data.pong);
         });
 
         $('a#ping').click(function(e) { 
             e.preventDefault();
-            sock.emit('ping', {'ping': 'stringping'});
+            sock.send('ping', {'ping': 'stringping'});
         });
     });
 </script>

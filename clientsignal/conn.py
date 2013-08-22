@@ -39,11 +39,10 @@ import clientsignal.settings as app_settings
 from clientsignal.utils import get_signalconnection
 from clientsignal.utils import get_class_or_func
 
-from clientsignal.socket import EventConnection
+from clientsignal.socket import EventConnection, EventHandlerMeta
 
 import logging
 log = logging.getLogger(__name__)
-
 
 # Build a Django Request from the base connection info we received. This
 # should handle authentication for us through Django
@@ -78,8 +77,8 @@ class DjangoRequestConnection(EventConnection):
 
     def __str__(self):
         try:
-            return "<%s %s %s %s>" % (self.__class__.__name__,
-                    self.endpoint, self.request.user, id(self))
+            return "<%s %s %s>" % (self.__class__.__name__,
+                    self.request.user, id(self))
         except AttributeError:
             return "<%s %s %s>" % (self.__class__.__name__,
                     self.endpoint, id(self))
@@ -115,13 +114,59 @@ class DjangoRequestConnection(EventConnection):
         log.info("Closed " + str(self))
 
 
-class BaseSignalConnection(DjangoRequestConnection):
+class SignalHandlerMeta(EventHandlerMeta):
+    def __init__(cls, name, bases, attrs):
+        # Set the _events dictionary for lookup.
+        setattr(cls, '_broadcast_signals', dict())
+        setattr(cls, '_listen_signals', dict())
+        super(SignalHandlerMeta, cls).__init__(name, bases, attrs)
 
-    # When register() is called for a specific connection, the signals
-    # being registered are stored here.
-    listen_signals = {}
-    broadcast_signals = {}
-    
+
+class BaseSignalConnection(DjangoRequestConnection):
+    """
+    This is the base level signal connection. It handles registration of
+    broadcast and listen signals and provides a stub for sending signals
+    that can be overriden by subclasses (provided they call super()).
+
+    Listen Signals:     Signals sent from client -> server
+    Broadcast Signals:  Signals sent from server -> clients
+    """
+    __metaclass__ = SignalHandlerMeta
+
+    @classmethod
+    def listen(cls, name, signal):
+        """ Register the given signal with the given name to be recieved
+        from client senders. """
+        
+        # Register the signal with the connection so that client events
+        # with the given name are sent as the given signal within Django
+        # when received.
+        # log.info("Listening for signal " + name)
+        cls.register_signal(name, signal, listen=True)
+
+    @classmethod
+    def broadcast(cls, name, signal):
+        """ Register the given signal with the given name to be sent to
+        client receivers. """
+        
+        # Register the signal with the connection so that the given
+        # Django signal is sent to the client as an event with the given
+        # name when received.
+        # log.info("Broadcasting signal " + name)
+        cls.register_signal(name, signal, broadcast=True)
+
+    @classmethod
+    def register(cls, name, signal):
+        """
+        Register the given signal with the given name for client senders and
+        receivers.
+        """
+        # Register the signal with the connection so that client socket.io
+        # events with the given name are sent as signals within Django when
+        # received.
+        log.info("Registering signal " + name + " for class " + unicode(cls))
+        cls.register_signal(name, signal, listen=True, broadcast=True)
+
     @classmethod
     def register_signal(cls, name, signal, listen=False, broadcast=False):
         """ 
@@ -132,12 +177,12 @@ class BaseSignalConnection(DjangoRequestConnection):
         Signals that are listened for from the client are wrapped
         as EventConnection events.
         """
-        if listen and name not in cls.listen_signals:
-            cls.listen_signals[name] = signal
+        if listen and name not in cls._listen_signals:
+            cls._listen_signals[name] = signal
 
-        if broadcast and name not in cls.broadcast_signals:
-            cls.broadcast_signals[name] = signal
-            
+        if broadcast and name not in cls._broadcast_signals:
+            cls._broadcast_signals[name] = signal
+
     def send_signal(self, name, **kwargs):
         """ 
         Send a signal to the client with the given names and the given 
@@ -162,8 +207,6 @@ class SimpleSignalConnection(BaseSignalConnection):
             # the SocketConnection's _events.
             def handler(conn, *args, **kwargs):
                 log.info(str(conn) + " received signal " + name)
-                
-                # kwargs['__signal_connection__'] = conn
                 signal.send(conn.request.user, **kwargs)
 
             cls._events[name] = handler
@@ -182,16 +225,15 @@ class SimpleSignalConnection(BaseSignalConnection):
                 kwargs['sender'] = sender
 
                 # If the sender is NOT this connection (i.e. the signal
-                # was received over this connection, send it on.
+                # was received over this connection or send it on.
                 if sender != self:
-                    log.info(str(self) + " sending signal " + name)
                     self.send_signal(name, **kwargs)
             
             return listener
 
         # Receive the signal within Django and send it to the client as a
-        # socket.io event.
-        for name, signal in self.broadcast_signals.items():
+        # event.
+        for name, signal in self._broadcast_signals.items():
             listener = listener_factory(name, signal)
             self._listeners[name] = listener
             # We don't want a weakref to the handler function, we don't
@@ -200,7 +242,7 @@ class SimpleSignalConnection(BaseSignalConnection):
 
     def on_close(self):
         # Disconnect signals that this connection was listening to.
-        for name, signal in self.broadcast_signals.items():
+        for name, signal in self._broadcast_signals.items():
             listener = self._listeners[name]
             signal.disconnect(listener, weak=False)
 

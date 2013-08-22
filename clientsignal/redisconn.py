@@ -122,7 +122,7 @@ class RedisSignalConnection(BaseSignalConnection):
         self.__redis.disconnect()
 
         # Disconnect signals that this connection was listening to.
-        for name, signal in self.broadcast_signals.items():
+        for name, signal in self._broadcast_signals.items():
             listener = self.broadcast_listeners[name]
             signal.disconnect(listener, weak=False)
 
@@ -145,7 +145,7 @@ class RedisSignalConnection(BaseSignalConnection):
 
         name, json_evt = message.body.split(':', 1)
 
-        if name in self.broadcast_signals:
+        if name in self._broadcast_signals:
             log.debug("Sending JSON signal from Redis: %s %s %s" % (self, name, json_evt))
             msg = json_event(self.endpoint, name, None, json_evt)
             # This event is already json-encoded.

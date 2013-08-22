@@ -26,8 +26,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from clientsignal.signal import register, listen, broadcast
-from clientsignal.signal import SignalEncoder
+from clientsignal.signal import SignalEncoder, signal_object_hook
 
 from clientsignal.conn import BaseSignalConnection
 from clientsignal.conn import SimpleSignalConnection
@@ -39,9 +38,7 @@ import clientsignal.settings as app_settings
 SignalConnection = SimpleSignalConnection
 
 __all__ = [
-            'register', 
-            'listen',
-            'broadcast',
+            'signal_object_hook',
             'SignalEncoder',
             'BaseSignalConnection',
             'SimpleSignalConnection',
