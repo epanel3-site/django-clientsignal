@@ -130,14 +130,7 @@ class Command(BaseCommand):
                     ]
 
         try:
-            application = tornado.web.Application(tornado_urls,
-                    # The TornadIO2 SocketServer wrapper for Tornado
-                    # will take care of the initial port. The first port
-                    # will be the only one used for socket.io.
-                    # XXX: Find a way to use more than one port for
-                    # socket.io?
-            )
-
+            application = tornado.web.Application(tornado_urls)
             io_loop = tornado.ioloop.IOLoop.instance()
             server = tornado.httpserver.HTTPServer(application, 
                     io_loop=io_loop)

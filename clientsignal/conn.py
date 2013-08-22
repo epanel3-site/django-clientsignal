@@ -36,7 +36,6 @@ from django.contrib.auth import get_user
 from django.contrib.auth.models import User, AnonymousUser
 
 import clientsignal.settings as app_settings
-from clientsignal.utils import get_signalconnection
 from clientsignal.utils import get_class_or_func
 
 from clientsignal.socket import EventConnection, EventHandlerMeta
@@ -161,10 +160,10 @@ class BaseSignalConnection(DjangoRequestConnection):
         Register the given signal with the given name for client senders and
         receivers.
         """
-        # Register the signal with the connection so that client socket.io
-        # events with the given name are sent as signals within Django when
+        # Register the signal with the connection so that client events
+        # with the given name are sent as signals within Django when
         # received.
-        log.info("Registering signal " + name + " for class " + unicode(cls))
+        # log.info("Registering signal " + name + " for class " + unicode(cls))
         cls.register_signal(name, signal, listen=True, broadcast=True)
 
     @classmethod

@@ -53,22 +53,6 @@ def get_class_or_func(import_path):
 
     return imported
 
-def __get_signalconnection(import_path):
-    """
-    Imports the Tornadio2 socket connection class at the given import
-    path.
-    """
-        
-    SignalConnectionClass = get_class_or_func(import_path)
-    BaseSignalConnection = get_class_or_func(app_settings.CLIENTSIGNAL_BASE_SIGNALCONNECTION)
-
-    if not issubclass(SignalConnectionClass, BaseSignalConnection):
-        raise ImproperlyConfigured('Finder "%s" is not a subclass of "%s"' %
-                                   (SignalConnectionClass, BaseSignalConnection))
-
-    return SignalConnectionClass
-
-get_signalconnection = memoize(__get_signalconnection, __signalconnection, 1)
 
 def get_backend_url_parts(url):
     import urlparse

@@ -136,7 +136,7 @@ class EventConnection(sockjs.tornado.SockJSConnection):
     def send_raw(self, raw_data):
         super(EventConnection, self).send(raw_data)
 
-    # socket.io nomenclature?
+    # XXX: support socket.io nomenclature?
     def emit(self, name, **kwargs):
         return self.send(name, **kwargs)
 

@@ -31,7 +31,6 @@ import weakref
 import simplejson as json
 
 import clientsignal.settings as app_settings
-from clientsignal.utils import get_signalconnection
 from clientsignal.utils import get_class_or_func
 
 import logging
