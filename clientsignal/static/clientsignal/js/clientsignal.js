@@ -221,6 +221,7 @@ var SignalSocket = function(url, protocols) {
 
     conn.onclose = function() { dispatch('close', null); };
     conn.onopen = function() { dispatch('open', null); };
+    conn.onerror = function() { dispatch('error', null); };
 
     var dispatch = function(event_name, message){
         var chain = callbacks[event_name];
