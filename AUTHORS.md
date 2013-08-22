@@ -1,4 +1,4 @@
 Authors & Contributors
 ======================
 
-- Will Barton `<mailto:g@gulielmus.com>`_
+- Will Barton `<g@gulielmus.com>`
