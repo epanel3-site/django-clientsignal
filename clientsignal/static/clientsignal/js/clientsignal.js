@@ -135,6 +135,7 @@ var ReconnectingSocket = function(url, protocols) {
             clearTimeout(timeout);
             self.debug && window.console && console.log('onopen', url);
             self.readyState = SockJS.OPEN;
+            self.protocol = conn.protocol;
             reconnectAttempt = false;
             self.onopen(event);
         };
@@ -143,8 +144,10 @@ var ReconnectingSocket = function(url, protocols) {
             self.debug && window.console && console.log("onclose", url, event);
             clearTimeout(timeout);
             conn = null;
+            self.protocol = undefined;
             if (forcedClose) {
                 self.readyState = SockJS.CLOSED;
+                self.protocol = undefined;
                 self.onclose(event);
             } else {
                 self.readyState = SockJS.CONNECTING;
@@ -188,8 +191,10 @@ var ReconnectingSocket = function(url, protocols) {
 //          // Handle signal 
 //      });
 // 
-var SignalSocket = function(url) {
-    var conn = new ReconnectingSocket(url);
+var SignalSocket = function(url, protocols) {
+    protocols = protocols || ['websocket', 'xdr-streaming', 'xhr-streaming', 'iframe-eventsource', 'iframe-htmlfile', 'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'];
+    var conn = new ReconnectingSocket(url, protocols);
+    this.conn = conn;
 
     var callbacks = {};
     this.on = function(event_name, callback) {
@@ -204,14 +209,18 @@ var SignalSocket = function(url) {
         return this;
     };
 
+    this.close = function() {
+        conn.close();
+    };
+
     // dispatch to the right handlers
     conn.onmessage = function(evt){
         var json = JSON.parse(evt.data);
         dispatch(json.event, json.data);
     };
 
-    conn.onclose = function() { dispatch('disconnect', null); };
-    conn.onopen = function() { dispatch('connect', null); };
+    conn.onclose = function() { dispatch('close', null); };
+    conn.onopen = function() { dispatch('open', null); };
 
     var dispatch = function(event_name, message){
         var chain = callbacks[event_name];
