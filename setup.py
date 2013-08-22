@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
 try:
     from setuptools import setup, find_packages
 except ImportError:
@@ -11,10 +10,10 @@ from os.path import dirname, join
 
 setup(
     name='django-clientsignal',
-    version='0.2',
+    version='0.3',
     author='Will Barton',
     author_email='willbarton@gmail.com',
-    description='TornadIO2-based mechanism for sending and receiving Django signals as socket.io client-side events.',
+    description='Django Client Signals is a SockJS-Tornado-based mechanism for sending and receiving Django signals as client-side events.',
     long_description=open('README.md').read(),
     url='http://github.com/gulielmus/django-clientsignal',
     install_requires=["tornadio2", "redis", "tornado-redis"],

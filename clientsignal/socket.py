@@ -29,8 +29,8 @@
 import clientsignal.settings as app_settings
 
 import sockjs.tornado
-# import simplejson as json 
-import json
+import simplejson as json 
+# import json
 
 from inspect import ismethod, getmembers
 
@@ -44,15 +44,13 @@ log = logging.getLogger(__name__)
 
 def json_encode(data):
     """ Encode the object with the configuable object hook. """
-    log.info("Encoding " + unicode(data));
     encoder_cls = get_class_or_func(app_settings.CLIENTSIGNAL_JSON_ENCODER)
-    return json.dumps(data) #, separators=(',', ':'), cls=encoder_cls)
+    return json.dumps(data, separators=(',', ':'), cls=encoder_cls)
 
 def json_decode(data):
     """ Decode the object with the configuable object hook. """
-    log.info("Decoding " + unicode(data));
     object_hook = get_class_or_func(app_settings.CLIENTSIGNAL_JSON_OBJECT_HOOK)
-    return json.loads(data) #, object_hook=object_hook)
+    return json.loads(data, object_hook=object_hook)
 
 
 # XXX: Monkeypatch these in. I dislike doing this, but there's no other
