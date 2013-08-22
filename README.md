@@ -121,6 +121,15 @@ global JSON encoder class and a global JSON object hook:
 Unfortunately, these cannot currently be configured on a
 per-SignalConnection basis. See the [`simplejson` documentation](http://simplejson.readthedocs.org/en/latest/) for more.
 
+### SockJS
+
+    CLIENTSIGNAL_SOCKJS_URL='http://cdn.sockjs.org/sockjs-0.3.min.js'
+
+Client Signal's `clientsignal_js` template tag will generate a
+`<script>` element for SockJS based on this URL. If you do not wish to
+use the CDN that is the default, you're free to provide another URL for
+the library.
+
 Commands
 --------
 

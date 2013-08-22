@@ -26,13 +26,16 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import absolute_import
+
 from django import template
 from django.conf import settings
+import clientsignal.settings as app_settings
 
 register = template.Library()
 
 @register.simple_tag
 def clientsignal_js():
-    return """<script src="%sclientsignal/js/sockjs.min.js"></script>\n<script src="%sclientsignal/js/clientsignal.js"></script>""" % (settings.STATIC_URL, settings.STATIC_URL)
+    return """<script src="%s"></script>\n<script src="%sclientsignal/js/clientsignal.js"></script>""" % (app_settings.CLIENTSIGNAL_SOCKJS_URL, settings.STATIC_URL)
 
 

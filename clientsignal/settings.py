@@ -45,19 +45,6 @@ CLIENTSIGNAL_BACKEND_OPTIONS = getattr(settings,
         'CLIENTSIGNAL_BACKEND_OPTIONS',
         CLIENTSIGNAL_BACKEND_OPTIONS_DEFAULT)
 
-# XXX: SockJS doesn't support multiplexing out of the box. It's
-# something we'll have to add back at some point in the future.
-#
-# CLIENTSIGNAL_MULTIPLEXED_CONNECTION_DEFAULT = 'clientsignal.SignalConnection'
-# CLIENTSIGNAL_BASE_SIGNALCONNECTION_DEFAULT = 'clientsignal.SignalConnection'
-#
-# CLIENTSIGNAL_MULTIPLEXED_CONNECTION = getattr(settings, 
-#         'CLIENTSIGNAL_MULTIPLEXED_CONNECTION',
-#         CLIENTSIGNAL_MULTIPLEXED_CONNECTION_DEFAULT)
-# CLIENTSIGNAL_BASE_SIGNALCONNECTION = getattr(settings, 
-#         'CLIENTSIGNAL_BASE_SIGNALCONNECTION',
-#         CLIENTSIGNAL_BASE_SIGNALCONNECTION_DEFAULT)
-
 ## Socket Connection settings
 
 # List of connections and their URLs
@@ -71,7 +58,6 @@ CLIENTSIGNAL_CONNECTIONS = getattr(settings,
         'CLIENTSIGNAL_CONNECTIONS',
         CLIENTSIGNAL_CONNECTIONS_DEFAULT)
 
-
 ## Custom JSON Encoding Settings
 CLIENTSIGNAL_JSON_ENCODER_DEFAULT = 'clientsignal.SignalEncoder'
 CLIENTSIGNAL_JSON_ENCODER = getattr(settings, 
@@ -82,20 +68,8 @@ CLIENTSIGNAL_JSON_OBJECT_HOOK = getattr(settings,
         'CLIENTSIGNAL_JSON_OBJECT_HOOK',
         CLIENTSIGNAL_JSON_OBJECT_HOOK_DEFAULT)
 
-## Socket protocol settings
-# CLIENTSIGNAL_PROTOCOLS_DEFAULT = (
-#         'websocket',
-#         'flashsocket',
-#         'xhr-polling',
-#         'htmlfile',
-#         'jsonp-polling',
-# )
-# CLIENTSIGNAL_PROTOCOLS = getattr(settings, 
-#         'CLIENTSIGNAL_PROTOCOLS',
-#         CLIENTSIGNAL_PROTOCOLS_DEFAULT)
-# 
-# CLIENTSIGNAL_FLASH_POLICY_PORT_DEFAULT = 10843
-# CLIENTSIGNAL_FLASH_POLICY_PORT = getattr(settings, 
-#         'CLIENTSIGNAL_FLASH_POLICY_PORT',
-#         CLIENTSIGNAL_FLASH_POLICY_PORT_DEFAULT)
+CLIENTSIGNAL_SOCKJS_URL_DEFAULT = 'http://cdn.sockjs.org/sockjs-0.3.min.js'
+CLIENTSIGNAL_SOCKJS_URL = getattr(settings, 
+        'CLIENTSIGNAL_SOCKJS_URL',
+        CLIENTSIGNAL_SOCKJS_URL_DEFAULT)
 

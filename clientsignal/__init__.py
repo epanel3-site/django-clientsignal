@@ -44,5 +44,6 @@ __all__ = [
             'SimpleSignalConnection',
             'RedisSignalConnection',
             'SignalConnection',
+            'app_settings',
           ]
 
