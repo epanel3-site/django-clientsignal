@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2012 Will Barton. 
+# Copyright 2012-2013 Will Barton. 
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without 
@@ -31,10 +31,10 @@ import tornado
 
 import redis
 import tornadoredis
-import json
 
 import clientsignal.settings as app_settings
-from clientsignal.conn import BaseSignalConnection, json_event
+from clientsignal.conn import BaseSignalConnection
+from clientsignal.socket import encode_event
 
 from clientsignal.utils import get_class_or_func
 from clientsignal.utils import get_backend_url_parts
@@ -51,12 +51,8 @@ REDIS = tornadoredis.Client(
                 port=REDIS_URL.get('port', 6379) or 6379)
 
 class RedisSignalConnection(BaseSignalConnection):
-    # The redis channel is this signalconnection's endpoint, therefore
-    # redis signal connections must have an endpoint.
-
+    # This is the redis channel of this connection.
     __channel__ = app_settings.CLIENTSIGNAL_BACKEND_OPTIONS.get('CHANNEL_PREFIX', 'clientsignal') + "_default"
-
-    __broadcast_listeners__ = {}
 
     # This is called from the Django side.
     @classmethod
@@ -65,21 +61,18 @@ class RedisSignalConnection(BaseSignalConnection):
                 signal, listen=listen, broadcast=broadcast)
 
         if listen:
+            ## Listen signals
             # Create an event handler to wrap the signal from a client
-            # and add it to the SocketConnection's _events.
-            # This treats it as if it were an @event
-            def handler(conn, *args, **kwargs):
-                # log.debug("LISTEN: Sending signal from client %s(%s)" % (name, kwargs))
-                log.info(str(conn) + " received signal " + name)
-                # kwargs['__signal_connection__'] = conn
-                signal.send(conn.request.user, **kwargs)
-
+            # and add it to the EventConnection's _events.
             if name not in cls._events:
+                def handler(conn, *args, **kwargs):
+                    log.info(str(conn) + " received signal " + name)
+                    signal.send(conn.request.user, **kwargs)
+
                 log.debug("Registering signal to listen from client %s" % name)
                 cls._events[name] = handler
 
         if broadcast:
-            ## Broadcast Signals
             # Generate a listener function for the given signal with the
             # given name and return it. This function will be connected to
             # the signal and will publish it to Redis on receipt.
@@ -90,7 +83,7 @@ class RedisSignalConnection(BaseSignalConnection):
                     del kwargs['signal']
                     kwargs['sender'] = sender
 
-                    json_evt = json.dumps({'name':name, 'args':kwargs}, cls=get_class_or_func(app_settings.CLIENTSIGNAL_DEFAULT_ENCODER))
+                    json_evt = encode_event(name, **kwargs)
                     log.debug("BROADCAST: Encoding and Sending %s(%s) signal to Redis channel %s" % (name, json_evt, cls.__channel__))
 
                     try:
@@ -102,15 +95,13 @@ class RedisSignalConnection(BaseSignalConnection):
 
             # Receive the signal within Django and publish it to the Redis
             # channel for this connection.
-            if name not in cls.__broadcast_listeners__:
-                log.debug("Registering signal for broadcast to client %s" % name)
+            log.debug("Registering signal for broadcast to client %s" % name)
 
-                listener = listener_factory(name, signal)
-                cls.__broadcast_listeners__[name] = listener
+            listener = listener_factory(name, signal)
 
-                # We don't want a weakref to the handler function, we don't
-                # want it garbage collected.
-                signal.connect(listener, weak=False)
+            # We don't want a weakref to the handler function, we don't
+            # want it garbage collected.
+            signal.connect(listener, weak=False)
 
     def on_open(self, connection_info):
         # Fire up the redis connection
@@ -123,6 +114,8 @@ class RedisSignalConnection(BaseSignalConnection):
         # client on close.
         log.debug("Closing Redis Signal Connection " + str(self));
         self.__redis.disconnect()
+
+        super(RedisSignalConnection, self).on_close();
 
     @tornado.gen.engine
     def __redis_listen(self):
@@ -141,8 +134,8 @@ class RedisSignalConnection(BaseSignalConnection):
 
         name, json_evt = message.body.split(':', 1)
 
-        if name in self.__broadcast_signals__:
+        if name in self._broadcast_signals:
             log.debug("Sending JSON signal from Redis: %s %s %s" % (self, name, json_evt))
-            msg = json_event(self.endpoint, name, None, json_evt)
-            self.session.send_message(msg)
+            # This event is already json-encoded.
+            self.send_raw(json_evt)
 
