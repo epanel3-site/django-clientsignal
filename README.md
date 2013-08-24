@@ -22,9 +22,6 @@ In your Django app:
     PingSignalConnection.listen('ping', ping)
     PingSignalConnection.broadcast('pong', pong)
 
-    clientsignal.broadcast('pong', pong)
-    clientsignal.listen('ping', ping)
-
     # Define a normal Django signal receiver for the remote signal
     @receiver(ping)
     def handle_ping(sender, **kwargs):
