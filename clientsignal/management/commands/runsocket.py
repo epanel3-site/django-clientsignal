@@ -18,17 +18,10 @@ from django.utils import autoreload
 import tornado
 import tornado.wsgi
 import tornado.httpserver
-from sockjs.tornado import SockJSRouter
 
 from clientsignal import settings as app_settings
 from clientsignal import SignalConnection
-from clientsignal.utils import get_class_or_func
-
-# from tornado import httpserver, wsgi, ioloop, web
-# from tornado.web import Application
-# from tornado.web import FallbackHandler
-# from tornado.web import StaticFileHandler
-# from tornado.wsgi import WSGIContainer
+from clientsignal.utils import get_class_or_func, get_socket_urls
 
 DEFAULT_PORT = "8000"
 
@@ -101,12 +94,7 @@ class Command(BaseCommand):
 
         base_port = self.ports[0]
 
-        # Create routers for each connection defined in the Django
-        # settings file.
-        routers = [SockJSRouter(get_class_or_func(conn), url) 
-                for url, conn in app_settings.CLIENTSIGNAL_CONNECTIONS.items()]
-        socket_urls = list(itertools.chain.from_iterable([r.urls for r in routers]))
-        tornado_urls = socket_urls 
+        tornado_urls = get_socket_urls()
 
         use_django = options.get('use_django', False)
         if use_django:

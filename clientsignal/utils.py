@@ -33,9 +33,15 @@ from django.utils.importlib import import_module
 
 from django.core.exceptions import ImproperlyConfigured
 
+from sockjs.tornado import SockJSRouter
+
 import clientsignal.settings as app_settings
 
+import itertools
+
 __signalconnection = SortedDict()
+
+
 
 def get_class_or_func(import_path):
     module, attr = import_path.rsplit('.', 1)
@@ -72,3 +78,65 @@ def get_backend_url_parts(url):
 
     return parts_dict
 
+
+def get_routers():
+    routers = [SockJSRouter(get_class_or_func(conn), url) 
+            for url, conn in app_settings.CLIENTSIGNAL_CONNECTIONS.items()]
+    return routers
+
+
+def get_socket_urls():
+    routers = get_routers()
+    socket_urls = list(itertools.chain.from_iterable([r.urls for r in routers]))
+    return socket_urls
+
+
+def get_tornado_application():
+    import tornado
+    import tornado.wsgi
+    from django.core.wsgi import get_wsgi_application
+    from django.contrib.staticfiles.handlers import StaticFilesHandler
+
+    tornado_urls = get_socket_urls()
+    django_handler = get_wsgi_application()
+    django_handler = StaticFilesHandler(django_handler)
+    django_container = tornado.wsgi.WSGIContainer(django_handler)
+
+    tornado_urls = tornado_urls + [
+                (r'.*', 
+                    tornado.web.FallbackHandler, 
+                    {'fallback': django_container}),
+            ]
+
+    application = tornado.web.Application(tornado_urls)
+    return application
+
+
+def run_django_socket_server(port):
+    import tornado.httpserver
+
+    application = get_tornado_application()
+
+    try:
+        io_loop = tornado.ioloop.IOLoop.instance()
+        server = tornado.httpserver.HTTPServer(application, 
+                io_loop=io_loop)
+        server.listen(port)
+
+        self.stdout.write((
+            "%(started_at)s\n"
+            "Django version %(version)s, using settings %(settings)r\n"
+            "Socket Server is running on port %(port)\n"
+        ) % {
+            "started_at": datetime.now().strftime('%B %d, %Y - %X'),
+            "version": self.get_version(),
+            "settings": settings.SETTINGS_MODULE,
+            "port": port,
+        })
+
+        io_loop.start()
+
+    except KeyboardInterrupt:
+        sys.exit(0)
+
+    return server
