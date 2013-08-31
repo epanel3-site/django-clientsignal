@@ -46,9 +46,22 @@ log = logging.getLogger(__name__)
 REDIS_URL = get_backend_url_parts(app_settings.CLIENTSIGNAL_BACKEND)
 
 # Redis client for publishing
-REDIS = tornadoredis.Client(
-                host=REDIS_URL.get('host', 'localhost'),
-                port=REDIS_URL.get('port', 6379) or 6379)
+# REDIS = tornadoredis.Client(
+#                 host=REDIS_URL.get('host', 'localhost'),
+#                 port=REDIS_URL.get('port', 6379) or 6379)
+
+# tornadoredis.Client() initializes the Tornado ioloop on __init__. This
+# function is an attempt to make importing this file safe for anything
+# that needs to happen before ioloop initialization.
+REDIS = None
+def get_redis_client():
+    global REDIS
+    if REDIS is None:
+        REDIS = tornadoredis.Client(
+                        host=REDIS_URL.get('host', 'localhost'),
+                        port=REDIS_URL.get('port', 6379) or 6379)
+    return REDIS
+
 
 class RedisSignalConnection(BaseSignalConnection):
     # This is the redis channel of this connection.
@@ -87,7 +100,7 @@ class RedisSignalConnection(BaseSignalConnection):
                     log.debug("BROADCAST: Encoding and Sending %s(%s) signal to Redis channel %s" % (name, json_evt, cls.__channel__))
 
                     try:
-                        REDIS.publish(cls.__channel__, "%s:%s" % (name, json_evt))
+                        get_redis_client().publish(cls.__channel__, "%s:%s" % (name, json_evt))
                     except Exception, e:
                         log.error("Cannot publish to redis: %s" % e);
 

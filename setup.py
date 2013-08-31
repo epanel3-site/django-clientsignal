@@ -16,7 +16,7 @@ setup(
     description='Django Client Signals is a SockJS-Tornado-based mechanism for sending and receiving Django signals as client-side events.',
     long_description=open('README.md').read(),
     url='http://github.com/gulielmus/django-clientsignal',
-    install_requires=["tornadio2", "redis", "tornado-redis"],
+    install_requires=["sockjs-tornado", "redis", "tornado-redis", "django"],
     include_package_data=True,
     package_data={'clientsignal':['static/clientsignal/js/*',],},
     packages=find_packages(),
