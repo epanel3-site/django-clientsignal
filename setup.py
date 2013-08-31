@@ -12,7 +12,7 @@ setup(
     name='django-clientsignal',
     version='0.3',
     author='Will Barton',
-    author_email='willbarton@gmail.com',
+    author_email='g@gulielmus.com',
     description='Django Client Signals is a SockJS-Tornado-based mechanism for sending and receiving Django signals as client-side events.',
     long_description=open('README.md').read(),
     url='http://github.com/gulielmus/django-clientsignal',
