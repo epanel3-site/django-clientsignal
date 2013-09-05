@@ -144,6 +144,38 @@ running for the Django web application and the socket server, using
 Redis to broker messages between them (`CLIENTSIGNAL_BACKEND`) and
 something like HAProxy on the front end. 
 
+Miscellaneous Features
+----------------------
+
+### Authentication
+
+Django Client Signals builds a Django request for each connection that
+includes session and authentication information. Presuming a user has
+logged in elsewhere in Django (and thus has a valid session id), your
+custom SignalConnection class could do the following:
+
+    class MySignalConnection(clientsignal.SignalConnection):
+
+        def on_open(self, connection_info):
+            super(MySignalConnection, self).on_open(connection_info)
+
+            # Require authentication
+            if self.request.user == AnonymousUser:
+                return False
+
+### Caching Middleware
+
+Generally speaking, Client Signals tries to load Django middleware for
+each connection. One of the few types of middleware that is relevant is
+caching middleware. Client Signal has been tested with Johnny Cache's
+query cache middleware, and works. This means you can use the same
+memcached (or whatever) query cache for both a Django app served via
+some other means (wsgi, etc) and a seperate Client Signals process (or
+processes, or processes on multiple servers). 
+
+No additional configuration is necessary for this. Just be sure to call 
+your superclass `on_open()` method if you override it.
+
 TODO
 ----
 
