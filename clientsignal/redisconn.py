@@ -123,12 +123,13 @@ class RedisSignalConnection(BaseSignalConnection):
         super(RedisSignalConnection, self).on_open(connection_info)
         
     def on_close(self):
-        # Since we're using a redis connection pool, disconnect the
-        # client on close.
         log.debug("Closing Redis Signal Connection " + str(self));
         self.__redis.disconnect()
 
-        super(RedisSignalConnection, self).on_close();
+        # Disconnect signals that this connection was listening to.
+        for name, signal in self._broadcast_signals.items():
+            listener = self._listeners[name]
+            signal.disconnect(listener, weak=False)
 
     @tornado.gen.engine
     def __redis_listen(self):
