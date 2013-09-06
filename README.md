@@ -125,7 +125,8 @@ per-SignalConnection basis. See the [`simplejson` documentation](http://simplejs
 Client Signal's `clientsignal_js` template tag will generate a
 `<script>` element for SockJS based on this URL. If you do not wish to
 use the CDN that is the default, you're free to provide another URL for
-the library.
+the library. If you are using SSL, you'll need to provide an `https://`
+URL here.
 
 Commands
 --------
