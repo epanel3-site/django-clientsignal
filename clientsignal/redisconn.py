@@ -123,7 +123,8 @@ class RedisSignalConnection(BaseSignalConnection):
         super(RedisSignalConnection, self).on_open(connection_info)
         
     def on_close(self):
-        log.debug("Closing Redis Signal Connection " + str(self));
+        super(RedisSignalConnection, self).on_close()
+
         self.__redis.disconnect()
 
         # Disconnect signals that this connection was listening to.
