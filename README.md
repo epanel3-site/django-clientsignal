@@ -7,6 +7,41 @@ recommend using it for anything serious.
 Django Client Signals is a SockJS-Tornado-based mechanism for sending
 and receiving Django signals as client-side events.
 
+**Table of Contents**
+
+- [Installation](#installation)
+- [Usage Example](#usage-example)
+- [Requirements](#requirements)
+- [Configuration Options](#configuration-options)
+    - [Signal Connections](#signal-connections)
+    - [Backends](#backends)
+    - [Object Encoding](#object-encoding)
+    - [SockJS](#sockjs)
+- [Commands](#commands)
+- [Stats](#stats)
+- [Miscellaneous Features](#miscellaneous-features)
+    - [Authentication](#authentication)
+    - [Caching Middleware](#caching-middleware)
+- [TODO](#todo)
+- [From Tornadio2](#from-tornadio2)
+
+Installation
+------------
+
+To install `django-clientsignal` run:
+
+    pip install django-clientsignal
+
+And add `clientsignal` to your `INSTALLED_APPS`:
+
+    INSTALLED_APPS = (
+        ...
+        'clientsignal',
+    )
+
+Usage Example
+-------------
+
 In your Django app:
 
     # Create a signal connection (or use clientsignal.SignalConnection)
@@ -28,7 +63,7 @@ In your Django app:
         # Send a signal to connected clients
         pong.send(sender=None, pong="Ponged")
 
-In your settings.py:
+In your `settings.py`:
 
     CLIENTSIGNAL_CONNECTIONS = {
             '/simple': 'myapp.PingSignalConnection',
@@ -66,7 +101,6 @@ In your template (jQuery is used here, but not required):
 To run (and server Django content too):
 
     python manage.py runsocket --reload --static --django
-
 
 
 Requirements
@@ -128,6 +162,8 @@ use the CDN that is the default, you're free to provide another URL for
 the library. If you are using SSL, you'll need to provide an `https://`
 URL here.
 
+
+
 Commands
 --------
 
@@ -144,6 +180,56 @@ The ideal deployment of Client Signals would have seperate processes
 running for the Django web application and the socket server, using
 Redis to broker messages between them (`CLIENTSIGNAL_BACKEND`) and
 something like HAProxy on the front end. 
+
+Stats
+-----
+
+Client Signal includes an option `clientsignal.stats` app that can
+display the live status of signal connections. There are multiple ways
+that the stats admin view can be configured. If the 
+[`django-adminplus` app](https://github.com/jsocol/django-adminplus)
+is present, the "Client Signal Stats" view will appear under custom
+views. Otherwise, you may include it in your `urls.py` *before*
+`admin.site.urls`:
+
+urlpatterns = patterns('',
+    url(r'^admin/clientsignal_stats/$', 'clientsignal.stats.admin.stats_view'),
+    url(r'^admin/', include(admin.site.urls)),
+)
+
+You will have to navigate to the URL manually, unless you wish to modify
+your admin `index.html`.
+
+### Configuration
+
+    INSTALLED_APPS = (
+        ...
+        'clientsignal.stats',
+    )
+
+    CLIENTSIGNAL_STATS = {
+            'period': 1000,
+            'hosts': [
+                'http://localhost:8000',
+            ],
+            'connections': [
+                'clientsignal.SignalConnection',
+            ],
+            'connectionClass': 'clientsignal.stats.signals.StatsSignalConnection',
+    }
+
+`period` is set in miliseconds and determines how frequently the stats
+are updated. 
+
+`hosts` is a list of running client signal servers. These are the hosts
+whose stats the stats admin view will display.
+
+`connections` is a list of the specific `SignalConnection` subclasses
+for which to view stats. Please note: a class that has subclasses will
+display those subclasses' connections.
+
+`connectionClass` is the `StatsSignalConnection` class that is used to
+send/receive signals from the stats admin view. 
 
 Miscellaneous Features
 ----------------------
@@ -164,6 +250,7 @@ custom SignalConnection class could do the following:
             if self.request.user == AnonymousUser:
                 return False
 
+
 ### Caching Middleware
 
 Generally speaking, Client Signals tries to load Django middleware for
@@ -183,7 +270,6 @@ TODO
 - Multiplexed `SignalConnection`
 - Custom JSON encoding/decoding for each `SignalConnection` class.
 - More Django-ish URL handling, perhaps dynamic URLs
-- Stats
 
 From Tornadio2
 --------------

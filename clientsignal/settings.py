@@ -75,4 +75,28 @@ CLIENTSIGNAL_SOCKJS_URL = getattr(settings,
 
 CLIENTSIGNAL_DISABLED_TRANSPORTS = [],
 
+## Stats Settings
+
+CLIENTSIGNAL_STATS = getattr(settings, 
+        'CLIENTSIGNAL_STATS', {})
+
+# The hosts to connect to to receive client signal stats. Designed so
+# that you can see stats from multiple client signal servers from one
+# (or more) Django web servers. 
+CLIENTSIGNAL_STATS.setdefault('hosts', ['http://localhost:8000',])
+
+# The period to sample stats, in ms.
+CLIENTSIGNAL_STATS.setdefault('period', 1000)
+
+# The particular signal connections to publish stats for. Keep in mind
+# that stats for subclasses of these signal connections will be
+# included.
+CLIENTSIGNAL_STATS.setdefault('connections',
+    ['clientsignal.SimpleSignalConnection',])
+
+# The connection class to use for the stats page — stats use signal
+# connections too! This should allow for subclassing.
+CLIENTSIGNAL_STATS.setdefault('connectionClass', 
+    'clientsignal.stats.signals.StatsSignalConnection')
+
 

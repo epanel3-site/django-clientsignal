@@ -1,0 +1,191 @@
+{% extends 'admin/base_site.html' %}
+{# {% extends 'adminplus/base.html' %} #}
+
+{% load clientsignal %}
+{% load verbatim %}
+{% load i18n adminmedia %}
+
+{% block extrahead %}
+  <script src="//codeorigin.jquery.com/jquery-1.10.2.min.js"></script>
+  <script src="//codeorigin.jquery.com/jquery-migrate-1.2.1.min.js"/></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/1.1.2/handlebars.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/flot/0.8.1/jquery.flot.min.js"></script>
+  {% clientsignal_js %}
+  <script id="host-template" type="text/x-handlebars-template">
+  {% verbatim %}
+    <div id="{{id}}" class="module" style="float: left;">
+      <h2>Stats for {{host}}</h2>
+      <div class="plot" style="width:450px;height:200px"></div>
+      <table width="450">
+        <thead>
+          <tr>
+            <th colspan="2" width="100%">Server Stats</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th>Sessions Active</th>
+              <td class="sessions_active">-</td></tr>
+          <tr><th>Connections Active</th>
+              <td class="connections_active">-</td></tr>
+          <tr><th>Connections/sec</th>
+              <td class="connections_ps">-</td></tr>
+          <tr><th>Packets Sent/sec</th>
+              <td class="packets_sent_ps">-</td></tr>
+          <tr><th>Packets Received/sec</th>
+              <td class="packets_recv_ps">-</td></tr>
+        </tbody>
+      </table>
+
+      <table width="450">
+        <thead>
+          <tr>
+            <th colspan="2">Client Users</th>
+          </tr>
+        </thead>
+        <tbody class="clients_body">
+        </tbody>
+      </table>
+    </div>
+  {% endverbatim %}
+  </script>
+
+  <script type="text/javascript">
+    function idify(proto_id) {
+        return proto_id.replace(/[^a-z0-9]/g, function(s) {
+            var c = s.charCodeAt(0);
+            if (c == 32) return '-';
+            if (c >= 65 && c <= 90) return '_' + s.toLowerCase();
+            return '__' + ('000' + c.toString(16)).slice(-4);
+        });
+    }
+
+    
+    $(window).load(function() {
+        $.each({{ STATS_HOSTS|safe }}, function(index, value) {
+            var host = value;
+            var host_id = idify(host);
+            var host_template = Handlebars.compile($("#host-template").html());
+            $('#hosts').append(host_template({id: host_id, host: host}));
+
+            // Plotting connection stats for this host
+            var plotData = [];
+            var plotTotalPoints = 60;
+            var plotDatasets = ['sessions_active', 
+                                'connections_active',
+                                'connections_ps',
+                                'packets_sent_ps',
+                                'packets_recv_ps'];
+
+            function preparePlot() {
+                // Get y values. If the data length is less than the 
+                // total length, populate with zeros.
+                if (plotData.length < plotTotalPoints) {
+                    while (plotData.length < plotTotalPoints) {
+                        var item = {};
+                        $.each(plotDatasets, function(i, value) {
+                            item[value] = 0;
+                        });
+                        plotData.push(item);
+                    }
+                }
+
+                // Zip x and y values
+                var res = [];
+                $.each(plotDatasets, function(i, name) {
+                    var dataset_res = [];
+                    for (var i = 0; i < plotData.length; ++i)
+                      dataset_res.push([i, plotData[i][name]]);
+                
+                    res.push({label: name, data: dataset_res});
+                });
+
+                return res;
+            }
+
+            function updatePlot(data) {
+                if (plotData.length >= plotTotalPoints) 
+                    plotData = plotData.slice(1);
+                plotData.push(data);
+
+                plot.setData(preparePlot());
+                plot.setupGrid();
+                plot.draw();
+            }
+
+            var plot = $.plot('#' + host_id + ' .plot', 
+                  [ 0 ], 
+                  {
+                      margin: {
+                              top: 8,
+                              bottom: 20,
+                              left: 20
+                      },
+                      legend: {
+                              position: "nw"
+                      },
+                      series: {
+                              shadowSize: 0
+                      },
+                      yaxis: {
+                              min: 0,
+                      },
+                      xaxis: {
+                              show: false
+                      },
+
+                      grid: {
+                              borderWidth: 1,
+                              minBorderMargin: 20,
+                              labelMargin: 10,
+                      }
+
+              });
+            
+
+            // Updates 
+            var sock = new SignalSocket(host + '{{ STATS_URL }}');
+
+            $(window).unload(function() {
+                sock.close();
+            });
+
+            sock.on('stat_broadcast', function(data) {
+              var server = data.stats.server;
+              var clients = data.stats.clients;
+
+              updatePlot(server);
+
+              $('.sessions_active', '#' + host_id).html(server.sessions_active);
+              $('.connections_active', '#' + host_id).html(server.connections_active);
+              $('.connections_ps', '#' + host_id).html(server.connections_ps);
+              $('.packets_sent_ps', '#' + host_id).html(server.packets_sent_ps);
+              $('.packets_recv_ps', '#' + host_id).html(server.packets_recv_ps);
+
+              $('.clients_body', '#' + host_id).html('');
+              $.each(clients, function(index, value) {
+                  var conn = value[0];
+                  var users = value[1];
+
+                  $('.clients_body', '#' + host_id).append('<tr><th>' + conn + '</th></tr>');
+                  $.each(users, function(index, value) {
+                      $('.clients_body', '#' + host_id).append('<tr><td>' + value + '</td></tr>');
+                  });
+              });
+
+            });
+        });
+    });
+
+  </script> 
+{% endblock %}
+
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="/admin/">
+{% trans "Home" %}</a> > Client Signal Stats</div>{% endblock %}
+
+{% block content %}
+
+<div id="hosts"></div>
+
+{% endblock %}
+
+

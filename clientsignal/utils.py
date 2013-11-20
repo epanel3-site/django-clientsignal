@@ -79,15 +79,20 @@ def get_backend_url_parts(url):
     return parts_dict
 
 
+__routers = []
 def get_routers():
-    router_settings = {
-        'sockjs_url': app_settings.CLIENTSIGNAL_SOCKJS_URL,
-        'disabled_transports': app_settings.CLIENTSIGNAL_DISABLED_TRANSPORTS,
-    }
-    routers = [SockJSRouter(get_class_or_func(conn), url,
-                            user_settings=router_settings) 
-            for url, conn in app_settings.CLIENTSIGNAL_CONNECTIONS.items()]
-    return routers
+    global __routers
+
+    if len(__routers) == 0:
+        router_settings = {
+            'sockjs_url': app_settings.CLIENTSIGNAL_SOCKJS_URL,
+            'disabled_transports': app_settings.CLIENTSIGNAL_DISABLED_TRANSPORTS,
+        }
+        __routers = [SockJSRouter(get_class_or_func(conn), url,
+                                user_settings=router_settings) 
+                for url, conn in app_settings.CLIENTSIGNAL_CONNECTIONS.items()]
+
+    return __routers
 
 
 def get_socket_urls():

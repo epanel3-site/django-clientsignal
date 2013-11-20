@@ -132,6 +132,8 @@ class BaseSignalConnection(DjangoRequestConnection):
     """
     __metaclass__ = SignalHandlerMeta
 
+    clients = set()
+
     @classmethod
     def listen(cls, name, signal):
         """ Register the given signal with the given name to be recieved
@@ -190,6 +192,14 @@ class BaseSignalConnection(DjangoRequestConnection):
         """
         log.debug("Sending signal named " + name)
         self.send(name, **kwargs)
+
+    def on_open(self, connection_info):
+        super(BaseSignalConnection, self).on_open(connection_info)
+        self.clients.add(self)
+
+    def on_close(self):
+        super(BaseSignalConnection, self).on_close()
+        self.clients.remove(self)
 
     
 class SimpleSignalConnection(BaseSignalConnection):
