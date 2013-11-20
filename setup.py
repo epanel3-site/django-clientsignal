@@ -14,6 +14,6 @@ setup(
     include_package_data=True,
     package_data={'clientsignal':['static/clientsignal/js/*',],},
     packages=find_packages(),
-    license='BSD',
+    license='BSD'
 )
 

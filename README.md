@@ -10,8 +10,8 @@ and receiving Django signals as client-side events.
 **Table of Contents**
 
 - [Installation](#installation)
-- [Usage Example](#usage-example)
 - [Requirements](#requirements)
+- [Usage Example](#usage-example)
 - [Configuration Options](#configuration-options)
     - [Signal Connections](#signal-connections)
     - [Backends](#backends)
@@ -30,7 +30,9 @@ Installation
 
 To install `django-clientsignal` run:
 
-    pip install django-clientsignal
+    pip install git+https://github.com/gulielmus/django-clientsignal.git
+    
+    django-clientsignal
 
 And add `clientsignal` to your `INSTALLED_APPS`:
 
@@ -38,6 +40,12 @@ And add `clientsignal` to your `INSTALLED_APPS`:
         ...
         'clientsignal',
     )
+
+Requirements
+------------
+
+- `sockjs-tornado`
+- `tornado-redis` (for Redis support)
 
 Usage Example
 -------------
@@ -101,13 +109,6 @@ In your template (jQuery is used here, but not required):
 To run (and server Django content too):
 
     python manage.py runsocket --reload --static --django
-
-
-Requirements
-------------
-
-- `sockjs-tornado`
-- `tornado-redis` (for Redis support)
 
 Configuration Options
 ---------------------
