@@ -32,8 +32,6 @@ To install `django-clientsignal` run:
 
     pip install git+https://github.com/gulielmus/django-clientsignal.git
     
-    django-clientsignal
-
 And add `clientsignal` to your `INSTALLED_APPS`:
 
     INSTALLED_APPS = (
