@@ -10,33 +10,62 @@
   <script src="//codeorigin.jquery.com/jquery-migrate-1.2.1.min.js"/></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/1.1.2/handlebars.min.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/flot/0.8.1/jquery.flot.min.js"></script>
+
+  <style type="text/css">
+      .legend {
+          display: inline-block;
+          width: 10px;
+          height: 10px;
+          margin: 2px; 
+      }
+      .legend.red { background-color: red; }
+      .legend.orange { background-color: orange; }
+      .legend.green { background-color: green; }
+      .legend.blue { background-color: blue; }
+      .legend.purple { background-color: purple; }
+
+  </style>
+
   {% clientsignal_js %}
   <script id="host-template" type="text/x-handlebars-template">
   {% verbatim %}
     <div id="{{id}}" class="module" style="float: left;">
       <h2>Stats for {{host}}</h2>
-      <div class="plot" style="width:450px;height:200px"></div>
-      <table width="450">
+      <div class="plot" style="width:350px;height:150px"></div>
+      <table width="350">
         <thead>
           <tr>
             <th colspan="2" width="100%">Server Stats</th>
           </tr>
         </thead>
         <tbody>
-          <tr><th>Sessions Active</th>
+        <tr><th><span class="legend red"></span>Sessions Active</th>
               <td class="sessions_active">-</td></tr>
-          <tr><th>Connections Active</th>
+          <tr><th><span class="legend orange"></span>Connections Active</th>
               <td class="connections_active">-</td></tr>
-          <tr><th>Connections/sec</th>
+          <tr><th><span class="legend green"></span>Connections/sec</th>
               <td class="connections_ps">-</td></tr>
-          <tr><th>Packets Sent/sec</th>
+          <tr><th><span class="legend blue"></span>Packets Sent/sec</th>
               <td class="packets_sent_ps">-</td></tr>
-          <tr><th>Packets Received/sec</th>
+          <tr><th><span class="legend purple"></span>Packets Received/sec</th>
               <td class="packets_recv_ps">-</td></tr>
+          <tr><th><span class="legend"></span>WebSocket Connections</th>
+              <td class="transp_websocket">-</td></tr>
+          <tr><th><span class="legend"></span>XHRStreaming Connections</th>
+              <td class="transp_xhr_streaming">-</td></tr>
+          <tr><th><span class="legend"></span>EventSource Connections</th>
+              <td class="transp_eventsource">-</td></tr>
+          <tr><th><span class="legend"></span>HTMLFile Connections</th>
+              <td class="transp_htmlfile">-</td></tr>
+          <tr><th><span class="legend"></span>XHR Polling Connections</th>
+              <td class="transp_xhr">-</td></tr>
+          <tr><th><span class="legend"></span>JSONP Connections</th>
+              <td class="transp_jsonp">-</td></tr>
+
         </tbody>
       </table>
 
-      <table width="450">
+      <table width="350">
         <thead>
           <tr>
             <th colspan="2">Client Users</th>
@@ -58,9 +87,9 @@
             return '__' + ('000' + c.toString(16)).slice(-4);
         });
     }
-
     
-    $(window).load(function() {
+$(window).load(function() {
+        var plots = {};
         $.each({{ STATS_HOSTS|safe }}, function(index, value) {
             var host = value;
             var host_id = idify(host);
@@ -68,113 +97,141 @@
             $('#hosts').append(host_template({id: host_id, host: host}));
 
             // Plotting connection stats for this host
-            var plotData = [];
-            var plotTotalPoints = 60;
-            var plotDatasets = ['sessions_active', 
-                                'connections_active',
-                                'connections_ps',
-                                'packets_sent_ps',
-                                'packets_recv_ps'];
 
-            function preparePlot() {
-                // Get y values. If the data length is less than the 
-                // total length, populate with zeros.
-                if (plotData.length < plotTotalPoints) {
-                    while (plotData.length < plotTotalPoints) {
-                        var item = {};
-                        $.each(plotDatasets, function(i, value) {
-                            item[value] = 0;
-                        });
-                        plotData.push(item);
+            var plot = {
+                plotData: [],
+                plotTotalPoints: 60,
+                plotDatasets: ['sessions_active',
+                               'connections_active',
+                               'connections_ps',
+                               'packets_sent_ps',
+                               'packets_recv_ps'],
+                plot: $.plot('#' + host_id + ' .plot', 
+                    [ 0 ], 
+                    {
+                        margin: {
+                            top: 8,
+                            bottom: 20,
+                            left: 20
+                        },
+                        legend: {
+                            position: "nw",
+                            show: false
+                        },
+                        series: {
+                            shadowSize: 0
+                        },
+                        yaxis: {
+                            min: 0,
+                        },
+                        xaxis: {
+                            show: false
+                        },
+                        grid: {
+                            borderWidth: 1,
+                                minBorderMargin: 20,
+                                labelMargin: 10,
+                        },
+                        colors: ['red','orange','green','blue','purple']
+                }),
+
+                preparePlot: function() {
+                    // Get y values. If the data length is less than the 
+                    // total length, populate with zeros.
+                    if (this.plotData.length < this.plotTotalPoints) {
+                        while (this.plotData.length < this.plotTotalPoints) {
+                            var item = {};
+                            $.each(this.plotDatasets, function(i, value) {
+                                item[value] = 0;
+                            });
+                            this.plotData.push(item);
+                        }
                     }
-                }
 
-                // Zip x and y values
-                var res = [];
-                $.each(plotDatasets, function(i, name) {
-                    var dataset_res = [];
-                    for (var i = 0; i < plotData.length; ++i)
-                      dataset_res.push([i, plotData[i][name]]);
-                
-                    res.push({label: name, data: dataset_res});
-                });
+                    // Zip x and y values
+                    var res = [];
+                    var that = this;
+                    $.each(this.plotDatasets, function(i, name) {
+                        var dataset_res = [];
+                        for (var i = 0; i < that.plotData.length; ++i)
+                          dataset_res.push([i, that.plotData[i][name]]);
+                        res.push({label: name, data: dataset_res});
+                    });
 
-                return res;
-            }
+                    return res;
+                },
 
-            function updatePlot(data) {
-                if (plotData.length >= plotTotalPoints) 
-                    plotData = plotData.slice(1);
-                plotData.push(data);
+                updatePlot: function(data) {
+                    if (this.plotData.length >= this.plotTotalPoints) 
+                        this.plotData = this.plotData.slice(1);
+                    this.plotData.push(data);
 
-                plot.setData(preparePlot());
-                plot.setupGrid();
-                plot.draw();
-            }
+                    this.plot.setData(this.preparePlot());
+                    this.plot.setupGrid();
+                    this.plot.draw();
+                },
+            };
 
-            var plot = $.plot('#' + host_id + ' .plot', 
-                  [ 0 ], 
-                  {
-                      margin: {
-                              top: 8,
-                              bottom: 20,
-                              left: 20
-                      },
-                      legend: {
-                              position: "nw"
-                      },
-                      series: {
-                              shadowSize: 0
-                      },
-                      yaxis: {
-                              min: 0,
-                      },
-                      xaxis: {
-                              show: false
-                      },
-
-                      grid: {
-                              borderWidth: 1,
-                              minBorderMargin: 20,
-                              labelMargin: 10,
-                      }
-
-              });
+            plots[host_id] = plot;
+        });
             
 
-            // Updates 
-            var sock = new SignalSocket(host + '{{ STATS_URL }}');
+        // Updates 
+        var sock = new SignalSocket('{{ STATS_URL }}');
 
-            $(window).unload(function() {
-                sock.close();
-            });
+        $(window).unload(function() {
+            sock.close();
+        });
 
-            sock.on('stat_broadcast', function(data) {
-              var server = data.stats.server;
-              var clients = data.stats.clients;
+        sock.on('stat_broadcast', function(data) {
+            var host = data.sender;
+            var host_id = idify(host);
+            
+            var server = data.stats.server;
+            var clients = data.stats.clients;
 
-              updatePlot(server);
+            var plot = plots[host_id]
+            plot.updatePlot(server);
 
-              $('.sessions_active', '#' + host_id).html(server.sessions_active);
-              $('.connections_active', '#' + host_id).html(server.connections_active);
-              $('.connections_ps', '#' + host_id).html(server.connections_ps);
-              $('.packets_sent_ps', '#' + host_id).html(server.packets_sent_ps);
-              $('.packets_recv_ps', '#' + host_id).html(server.packets_recv_ps);
+            $('.sessions_active', '#' + host_id).html(
+                server.sessions_active);
+            $('.connections_active', '#' + host_id).html(
+                server.connections_active);
+            $('.connections_ps', '#' + host_id).html(
+                server.connections_ps);
+            $('.packets_sent_ps', '#' + host_id).html(
+                server.packets_sent_ps);
+            $('.packets_recv_ps', '#' + host_id).html(
+                server.packets_recv_ps);
 
-              $('.clients_body', '#' + host_id).html('');
-              $.each(clients, function(index, value) {
-                  var conn = value[0];
-                  var users = value[1];
+            // Transports
+            $('.transp_websocket', '#' + host_id).html(
+                server.transp_websocket);
+            $('.transp_xhr_streaming', '#' + host_id).html(
+                server.transp_xhr_streaming);
+            $('.transp_eventsource', '#' + host_id).html(
+                server.transp_eventsource);
+            $('.transp_htmlfile', '#' + host_id).html(
+                server.transp_htmlfile);
+            $('.transp_xhr', '#' + host_id).html(
+                server.transp_xhr);
+            $('.transp_jsonp', '#' + host_id).html(
+                server.transp_jsonp);
 
-                  $('.clients_body', '#' + host_id).append('<tr><th>' + conn + '</th></tr>');
-                  $.each(users, function(index, value) {
-                      $('.clients_body', '#' + host_id).append('<tr><td>' + value + '</td></tr>');
-                  });
-              });
+            $('.clients_body', '#' + host_id).html('');
+            $.each(clients, function(index, value) {
+                var conn = value[0];
+                var users = value[1];
 
+                $('.clients_body', '#' + host_id).append(
+                    '<tr><th>' + conn + '</th></tr>');
+                $.each(users, function(index, value) {
+                    $('.clients_body', '#' + host_id).append(
+                        '<tr><td>' + value + '</td></tr>');
+                    });
+                });
             });
         });
-    });
 
   </script> 
 {% endblock %}

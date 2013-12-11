@@ -26,56 +26,62 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import socket
+
 from collections import defaultdict
 from collections import Counter
 
 import tornado
 
+from django.conf import settings
 from django.dispatch import Signal, receiver
 
 import clientsignal.settings as app_settings
 
 from clientsignal.conn import SimpleSignalConnection
+from clientsignal.redisconn import RedisSignalConnection
 from clientsignal.utils import get_class_or_func, get_routers
 
-stat_broadcast = Signal(providing_args=["stats"])
+
 
 class StatsSignalConnection(SimpleSignalConnection):
+    pass
 
-    def on_open(self, connection_info):
-        super(StatsSignalConnection, self).on_open(connection_info)
+class RedisStatsSignalConnection(RedisSignalConnection):
+    pass
 
-        period = app_settings.CLIENTSIGNAL_STATS['period'] 
-        self.loop = tornado.ioloop.PeriodicCallback(self._send_stats,
-                period)
-        self.loop.start()
-
-    def on_close(self):
-        super(StatsSignalConnection, self).on_close()
-        self.loop.stop()
-
-    def _send_stats(self):
-        routers = get_routers()
-        router_stats_dicts = [r.stats.dump() for r in routers if
-                r._connection in stat_connections]
-        router_stats = sum( 
-                (Counter(dict(x)) for x in router_stats_dicts),
-                Counter())
-
-        clients_list = [(c.request.user.username, c.__class__.__name__)
-                        for c in StatsSignalConnection.clients
-                        if c.__class__ in stat_connections]
-        clients = defaultdict(list)
-        [clients[k].append(v) for v, k in clients_list]
-
-        stats = {
-                'server': router_stats,
-                'clients': clients.items(),
-                }
-        stat_broadcast.send(sender=None, stats=stats)
-
-StatsSignalConnection.broadcast('stat_broadcast', stat_broadcast)
+stat_broadcast = Signal(providing_args=["stats"])
+# StatsSignalConnection.broadcast('stat_broadcast', stat_broadcast)
+RedisStatsSignalConnection.broadcast('stat_broadcast', stat_broadcast)
 
 stat_connections = [get_class_or_func(c) for c in
         app_settings.CLIENTSIGNAL_STATS['connections']]
+host = "%s:%s" % (socket.gethostname(),
+        settings.CLIENTSIGNAL_CURRENT_PORTS[0])
 
+def _send_stats():
+    global stat_connections, host
+    routers = get_routers()
+    router_stats_dicts = [r.stats.dump() for r in routers if
+            r._connection in stat_connections]
+    router_stats = sum( 
+            (Counter(dict(x)) for x in router_stats_dicts),
+            Counter())
+
+    clients_list = [(c.request.user.username, c.__class__.__name__)
+                    for c in StatsSignalConnection.clients
+                    if c.__class__ in stat_connections]
+    clients = defaultdict(list)
+    [clients[k].append(v) for v, k in clients_list]
+
+    stats = {
+            'server': router_stats,
+            'clients': clients.items(),
+            }
+    
+    stat_broadcast.send(sender=host, stats=stats)
+
+if app_settings.CLIENTSIGNAL_STATS['period'] > 0:
+    loop = tornado.ioloop.PeriodicCallback(_send_stats,
+            app_settings.CLIENTSIGNAL_STATS['period'])
+    loop.start()

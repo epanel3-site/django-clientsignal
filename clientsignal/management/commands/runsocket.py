@@ -62,6 +62,7 @@ class Command(BaseCommand):
             sys.exit(0)
 
         self.ports = ports
+        settings.CLIENTSIGNAL_CURRENT_PORTS = ports
 
         self.run(**options)
 
